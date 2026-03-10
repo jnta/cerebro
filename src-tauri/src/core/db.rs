@@ -1,16 +1,16 @@
-use rusqlite::{params, Connection, Result as SqliteResult};
+use rusqlite::{ffi::sqlite3_auto_extension, params, Connection, Result as SqliteResult};
 use sqlite_vec::sqlite3_vec_init;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use zerocopy::IntoBytes;
 
 
 pub fn init_db(vault_path: &Path) -> SqliteResult<Connection> {
+    unsafe {
+        sqlite3_auto_extension(Some(std::mem::transmute(sqlite3_vec_init as *const ())));
+    }
     let db_path = vault_path.join(".cerebro.db");
     let db = Connection::open(&db_path)?;
     db.execute_batch("PRAGMA journal_mode = WAL;")?;
-    unsafe {
-        sqlite3_vec_init(db.handle());
-    }
     db.execute_batch(
         "
         BEGIN;
@@ -73,11 +73,14 @@ pub fn search_similar(conn: &Connection, query_embedding: &[f32], limit: usize) 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn test_vec_insertion_and_search() {
+        unsafe { 
+            sqlite3_auto_extension(Some(std::mem::transmute(sqlite3_vec_init as *const ())));
+        }
         let conn = Connection::open_in_memory().unwrap();
-        unsafe { sqlite3_vec_init(conn.handle()) };
         
         conn.execute_batch(
             "
