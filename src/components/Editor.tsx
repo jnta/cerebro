@@ -4,7 +4,7 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { useTheme } from "../ThemeContext";
 
-export function AntigravityEditor() {
+export function Editor() {
   const { theme } = useTheme();
   const [doc, setDoc] = useState<string>("# Welcome to Cerebro\n\nThis is the high-friction cognitive gym. Friction is a feature.\n");
 
