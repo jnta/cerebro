@@ -39,6 +39,11 @@ async fn read_note(folder: String, name: String, state: State<'_, AppState>) -> 
 }
 
 #[tauri::command]
+async fn create_note(folder: String, name: String, state: State<'_, AppState>) -> Result<core::vault::NoteEntry, String> {
+    core::vault::create_note(&folder, &name, &state.vault_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn search_notes(
     query: String,
     limit: usize,
@@ -80,7 +85,7 @@ pub fn run() {
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![search_notes, list_vault_notes, read_note])
+        .invoke_handler(tauri::generate_handler![search_notes, list_vault_notes, read_note, create_note])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::time::SystemTime;
 use serde::Serialize;
+use std::io;
 
 #[derive(Serialize, Clone)]
 pub struct NoteEntry {
@@ -42,7 +43,23 @@ pub fn list_notes(folder: &str, vault_path: &Path) -> Vec<NoteEntry> {
     entries
 }
 
-pub fn read_note(folder: &str, name: &str, vault_path: &Path) -> std::io::Result<String> {
+pub fn read_note(folder: &str, name: &str, vault_path: &Path) -> io::Result<String> {
     let path = vault_path.join(folder).join(format!("{}.md", name));
     std::fs::read_to_string(path)
+}
+
+pub fn create_note(folder: &str, name: &str, vault_path: &Path) -> io::Result<NoteEntry> {
+    let dir = vault_path.join(folder);
+    std::fs::create_dir_all(&dir)?;
+    let path = dir.join(format!("{}.md", name));
+    if !path.exists() {
+        std::fs::write(&path, "")?;
+    }
+    let modified = path.metadata()
+        .ok()
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    Ok(NoteEntry { name: name.to_string(), folder: folder.to_string(), modified })
 }

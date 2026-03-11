@@ -23,3 +23,7 @@ export function readNote(folder: string, name: string): Promise<string> {
 export function searchNotes(query: string, limit: number): Promise<[string, number][]> {
   return invoke<[string, number][]>("search_notes", { query, limit });
 }
+
+export function createNote(folder: string, name: string): Promise<NoteEntry> {
+  return invoke<NoteEntry>("create_note", { folder, name });
+}

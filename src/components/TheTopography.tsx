@@ -7,17 +7,19 @@ import type { NoteEntry, VaultNotes } from "@/services/tauri.ts";
 
 interface Props {
   onOpen: (note: NoteEntry) => void;
+  refreshTrigger: number;
 }
 
-export function TheTopography({ onOpen }: Props) {
+export function TheTopography({ onOpen, refreshTrigger }: Props) {
   const [vault, setVault] = useState<VaultNotes>({ daily: [], resources: [], projects: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     listVaultNotes()
       .then(setVault)
       .finally(() => setLoading(false));
-  }, []);
+  }, [refreshTrigger]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">

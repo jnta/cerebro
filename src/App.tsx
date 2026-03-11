@@ -6,6 +6,7 @@ import { ActivityBar } from "@/components/ActivityBar.tsx";
 import { TabBar } from "@/components/TabBar.tsx";
 import { TopNavBar } from "@/components/TopNavBar.tsx";
 import { StatusBar } from "@/components/StatusBar.tsx";
+import { CreateNoteModal } from "@/components/CreateNoteModal.tsx";
 import { readNote } from "@/services/tauri.ts";
 import type { NoteEntry } from "@/services/tauri.ts";
 
@@ -52,6 +53,8 @@ function App() {
   const [sidebarView, setSidebarView] = useState<"files" | "search" | null>("files");
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabName, setActiveTabName] = useState<string | null>(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [vaultVersion, setVaultVersion] = useState(0);
   const left = usePanelResize(240, LEFT_MIN, LEFT_MAX);
 
   const activeTab = tabs.find(t => t.name === activeTabName) ?? null;
@@ -86,10 +89,21 @@ function App() {
     setTabs(prev => prev.map(t => t.name === activeTabName ? { ...t, content: value } : t));
   };
 
+  const handleNoteCreated = async (note: NoteEntry) => {
+    const content = await readNote(note.folder, note.name).catch(() => "");
+    setTabs(prev => {
+      const exists = prev.find(t => t.name === note.name && t.folder === note.folder);
+      if (exists) return prev;
+      return [...prev, { ...note, content }];
+    });
+    setActiveTabName(note.name);
+    setVaultVersion(v => v + 1);
+  };
+
   return (
     <ThemeProvider>
       <div className="flex flex-col h-screen overflow-hidden bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-400 font-display selection:bg-primary/30">
-        <TopNavBar />
+        <TopNavBar onCreateNote={() => setCreateModalOpen(true)} />
 
         <main className="flex flex-1 overflow-hidden">
 
@@ -99,7 +113,7 @@ function App() {
             style={{ width: sidebarOpen ? left.width : 0 }}
             className="flex flex-col bg-background-light/50 dark:bg-[#0d0d0d] shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out border-r border-synapse-border"
           >
-            {sidebarView === "files" && <TheTopography onOpen={handleOpenNote} />}
+            {sidebarView === "files" && <TheTopography onOpen={handleOpenNote} refreshTrigger={vaultVersion} />}
             {sidebarView === "search" && (
               <div className="p-3 flex-1">
                 <div className="relative group">
@@ -134,7 +148,7 @@ function App() {
                 activeTab={activeTab}
                 content={activeTab?.content ?? ""}
                 onChange={handleContentChange}
-                onCreateNote={() => setSidebarView("files")}
+                onCreateNote={() => setCreateModalOpen(true)}
                 onOpenNote={() => setSidebarView("files")}
               />
             </div>
@@ -143,6 +157,11 @@ function App() {
         </main>
 
         <StatusBar />
+        <CreateNoteModal
+          open={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onCreated={handleNoteCreated}
+        />
       </div>
     </ThemeProvider>
   );
