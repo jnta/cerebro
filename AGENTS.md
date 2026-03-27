@@ -28,8 +28,15 @@
 | DI / CDI       | `quarkus-arc`                           | Dependency injection and bean wiring        |
 | Frontend host  | `quarkus-quinoa` 2.7.2                  | Serves the Vite/React SPA via Quarkus       |
 | Build          | Maven (mvnw wrapper)                    | Build, packaging, and dependency management |
+| Native Image   | GraalVM                                 | Compile Quarkus app to native image         |
 | Testing        | `quarkus-junit`, `rest-assured`         | Unit and integration tests                  |
 | Java version   | Java 25 (`maven.compiler.release=25`)   | Modern Java features                        |
+
+### Desktop Client — Electron
+
+| Layer        | Technology                        | Purpose                                    |
+|--------------|-----------------------------------|--------------------------------------------|
+| App Wrapper  | Electron                          | Transform web app into desktop application |
 
 ### Frontend — React + Vite
 
@@ -64,8 +71,11 @@ cd src/main/webui && npm run dev
 # Run backend tests
 ./mvnw test
 
-# Production package
+# Production package (JVM)
 ./mvnw package
+
+# Production package (Native Image)
+./mvnw package -Dnative
 ```
 
 Quarkus DevUI: `http://localhost:8080/q/dev`  
