@@ -11,4 +11,6 @@ public interface NoteRepository {
     Optional<Note> findById(NoteId id);
     void save(Note note);
     void delete(NoteId id);
+    void createFolder(String path);
+    List<String> findAllFolders();
 }

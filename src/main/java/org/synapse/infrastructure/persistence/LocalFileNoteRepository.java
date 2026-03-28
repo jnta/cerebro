@@ -31,7 +31,7 @@ public class LocalFileNoteRepository implements NoteRepository {
 
     @Override
     public List<Note> findAll() {
-        try (Stream<Path> paths = Files.walk(vaultPath, 1)) {
+        try (Stream<Path> paths = Files.walk(vaultPath)) {
             return paths.filter(Files::isRegularFile)
                         .filter(p -> p.toString().endsWith(".md"))
                         .map(this::readNoteFromFile)
@@ -56,6 +56,9 @@ public class LocalFileNoteRepository implements NoteRepository {
     public void save(Note note) {
         Path filePath = vaultPath.resolve(note.getId().value() + ".md");
         try {
+            if (filePath.getParent() != null) {
+                Files.createDirectories(filePath.getParent());
+            }
             Files.writeString(filePath, note.getContent());
         } catch (IOException e) {
             throw new RuntimeException("Could not write note to file: " + filePath, e);
@@ -72,11 +75,34 @@ public class LocalFileNoteRepository implements NoteRepository {
         }
     }
 
+    @Override
+    public void createFolder(String path) {
+        Path folderPath = vaultPath.resolve(path);
+        try {
+            Files.createDirectories(folderPath);
+        } catch (IOException e) {
+            throw new RuntimeException("Could not create folder: " + folderPath, e);
+        }
+    }
+
+    @Override
+    public List<String> findAllFolders() {
+        try (Stream<Path> paths = Files.walk(vaultPath)) {
+            return paths.filter(Files::isDirectory)
+                        .filter(p -> !p.equals(vaultPath))
+                        .map(p -> vaultPath.relativize(p).toString().replace('\\', '/'))
+                        .collect(Collectors.toList());
+        } catch (IOException e) {
+            return List.of();
+        }
+    }
+
     private Optional<Note> readNoteFromFile(Path filePath) {
         try {
             String content = Files.readString(filePath);
-            String fileName = filePath.getFileName().toString();
-            String idStr = fileName.substring(0, fileName.lastIndexOf('.'));
+            Path relativePath = vaultPath.relativize(filePath);
+            String relativeStr = relativePath.toString().replace('\\', '/');
+            String idStr = relativeStr.substring(0, relativeStr.lastIndexOf('.'));
             
             String title = idStr;
             if (content.startsWith("# ")) {

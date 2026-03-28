@@ -47,11 +47,11 @@ function TabItem({ tab, isActive, onSelect, onClose }: TabItemProps) {
 
 interface TabBarProps {
   tabs: Tab[]
-  activeId: string
+  activeId: string | null
 }
 
 export function TabBar({ tabs, activeId }: TabBarProps) {
-  const { openNew, closeTab, setActiveId } = useEditorStore()
+  const { createNewNote, closeTab, setActiveId } = useEditorStore()
 
   return (
     <div
@@ -71,7 +71,7 @@ export function TabBar({ tabs, activeId }: TabBarProps) {
         />
       ))}
       <button
-        onClick={openNew}
+        onClick={() => createNewNote()}
         aria-label="New tab"
         title="New tab"
         className="flex items-center justify-center w-[35px] h-full shrink-0 text-lg border-r border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] transition-colors duration-[var(--duration-fast)]"

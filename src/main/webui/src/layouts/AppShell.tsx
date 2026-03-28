@@ -1,24 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { TabBar } from '@/features/editor/components/TabBar'
 import { MarkdownEditor } from '@/features/editor/components/MarkdownEditor'
 import { useEditorStore } from '@/features/editor/store/useEditorStore'
 import { useTheme } from '@/core/hooks/useTheme'
 
-const INITIAL_CONTENT = `# Welcome to Synapse
-
-Start writing your thoughts here...
-
-## Getting Started
-
-- Use **bold** and *italic* for emphasis
-- Create links with \`[[note title]]\`
-- Add tags with \`#topic\`
-`
-
 function IconExplorer() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 6h18M3 12h18M3 18h18" />
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
     </svg>
   )
 }
@@ -47,12 +37,325 @@ function IconMoon() {
   )
 }
 
+function IconTrash() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="3 6 5 6 21 6"></polyline>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    </svg>
+  )
+}
+
+function IconFile() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)] transition-colors">
+      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+      <polyline points="13 2 13 9 20 9"></polyline>
+    </svg>
+  )
+}
+
+function IconNewFile() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <line x1="12" y1="18" x2="12" y2="12"></line>
+      <line x1="9" y1="15" x2="15" y2="15"></line>
+    </svg>
+  )
+}
+
+function IconNewFolder() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+      <line x1="12" y1="11" x2="12" y2="17"></line>
+      <line x1="9" y1="14" x2="15" y2="14"></line>
+    </svg>
+  )
+}
+
+function IconRefresh() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="23 4 23 10 17 10"></polyline>
+      <polyline points="1 20 1 14 7 14"></polyline>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+    </svg>
+  )
+}
+
+function IconCollapseAll() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="4 14 12 6 20 14"></polyline>
+      <line x1="12" y1="6" x2="12" y2="22"></line>
+      <line x1="4" y1="2" x2="20" y2="2"></line>
+    </svg>
+  )
+}
+
+function IconChevronRight({ className = '' }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 ${className}`}>
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  )
+}
+
+// Tree helper types and functions
+interface FileNode {
+  type: 'file' | 'folder'
+  name: string
+  path: string
+  note?: any
+  children?: FileNode[]
+}
+
+function buildTree(notes: any[], folders: string[]): FileNode[] {
+  const root: FileNode = { type: 'folder', name: 'root', path: '', children: [] }
+
+  for (const folder of folders) {
+    const parts = folder.split('/')
+    let current = root
+    let currentPath = ''
+    for (const part of parts) {
+      if (!part) continue
+      currentPath = currentPath ? currentPath + '/' + part : part
+      let node = current.children!.find(c => c.name === part && c.type === 'folder')
+      if (!node) {
+        node = { type: 'folder', name: part, path: currentPath, children: [] }
+        current.children!.push(node)
+      }
+      current = node
+    }
+  }
+
+  for (const note of notes) {
+    const parts = note.id.split('/')
+    let current = root
+    let currentPath = ''
+    for (let i = 0; i < parts.length; i++) {
+      currentPath = currentPath ? currentPath + '/' + parts[i] : parts[i]
+      const isFile = i === parts.length - 1
+      
+      let node = current.children!.find(c => c.name === parts[i] && c.type === (isFile ? 'file' : 'folder'))
+      if (!node) {
+        node = {
+          type: isFile ? 'file' : 'folder',
+          name: parts[i],
+          path: currentPath,
+          children: isFile ? undefined : [],
+          note: isFile ? note : undefined
+        }
+        current.children!.push(node)
+      }
+      if (!isFile) {
+        current = node
+      }
+    }
+  }
+
+  const sortTree = (node: FileNode) => {
+    if (node.children) {
+      node.children.sort((a, b) => {
+        if (a.type === b.type) return a.name.localeCompare(b.name)
+        return a.type === 'folder' ? -1 : 1
+      })
+      node.children.forEach(sortTree)
+    }
+  }
+  sortTree(root)
+  return root.children!
+}
+
+// Inline input component for creating nodes
+function InlineInput({ type, depth, onCommit, onCancel }: { type: 'file' | 'folder', depth: number, onCommit: (name: string) => void, onCancel: () => void }) {
+  const [value, setValue] = useState('')
+  const [error, setError] = useState(false)
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') onCancel()
+    if (e.key === 'Enter') {
+      if (!value.trim()) {
+        setError(true)
+        return
+      }
+      onCommit(value.trim())
+    }
+  }
+
+  return (
+    <div className="flex flex-col py-1" style={{ paddingLeft: `${depth * 12 + 8}px` }}>
+      <div className="flex items-center gap-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-accent)] rounded px-1.5 py-1 mr-2 shadow-sm">
+        <span className="text-[var(--color-accent)] shrink-0">
+          {type === 'file' ? <IconNewFile /> : <IconNewFolder />}
+        </span>
+        <input 
+          autoFocus 
+          value={value} 
+          onChange={e => { setValue(e.target.value); setError(false) }}
+          onKeyDown={handleKeyDown}
+          onBlur={onCancel}
+          className="flex-1 bg-transparent text-[13px] text-[var(--color-text-primary)] outline-none w-full min-w-0"
+          placeholder={`Enter Name...`}
+        />
+      </div>
+      {error && <span className="text-[10px] text-red-500 font-medium mt-0.5 ml-1">Name cannot be blank</span>}
+    </div>
+  )
+}
+
+function TreeNode({ node, depth = 0, creatingState, onCommitCreate, onCancelCreate }: { 
+  node: FileNode, 
+  depth?: number,
+  creatingState: { parentPath: string, type: 'file' | 'folder' } | null,
+  onCommitCreate: (path: string) => void,
+  onCancelCreate: () => void
+}) {
+  const { openNote, deleteNote, expandedFolders, toggleFolder } = useEditorStore()
+  
+  if (node.type === 'file') {
+    return (
+      <div 
+        className="group flex justify-between items-center text-[13px] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] cursor-pointer transition-colors duration-[var(--duration-fast)]"
+        onClick={() => openNote(node.note.id)}
+      >
+        <div className="flex-1 py-1.5 flex items-center gap-1.5 truncate" style={{ paddingLeft: `${depth * 12 + 8}px` }}>
+          <IconFile />
+          <span className="truncate flex-1">{node.name.replace(/\.md$/, '')}</span>
+        </div>
+        <button 
+          className="opacity-0 group-hover:opacity-100 p-1 mr-2 text-[var(--color-text-muted)] hover:text-red-400 transition-opacity"
+          onClick={(e) => {
+            e.stopPropagation()
+            deleteNote(node.note.id)
+          }}
+          title="Delete File"
+        >
+          <IconTrash />
+        </button>
+      </div>
+    )
+  }
+
+  const isExpanded = expandedFolders.includes(node.path)
+  const isCreatingHere = creatingState?.parentPath === node.path
+
+  return (
+    <>
+      <div 
+        className="group flex justify-between items-center text-[13px] font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] cursor-pointer transition-colors duration-[var(--duration-fast)] select-none"
+        onClick={() => toggleFolder(node.path)}
+      >
+        <div className="flex-1 py-1.5 flex items-center gap-1.5 truncate" style={{ paddingLeft: `${depth * 12 + 8}px` }}>
+          <IconChevronRight className={`transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`} />
+          <span className="truncate flex-1">{node.name}</span>
+        </div>
+      </div>
+      
+      {isExpanded && (
+        <>
+          {isCreatingHere && (
+            <InlineInput 
+              type={creatingState.type} 
+              depth={depth + 1} 
+              onCommit={(name) => onCommitCreate(node.path ? `${node.path}/${name}` : name)}
+              onCancel={onCancelCreate}
+            />
+          )}
+          {node.children?.map(child => (
+            <TreeNode 
+              key={child.path} 
+              node={child} 
+              depth={depth + 1} 
+              creatingState={creatingState}
+              onCommitCreate={onCommitCreate}
+              onCancelCreate={onCancelCreate}
+            />
+          ))}
+        </>
+      )}
+      
+      {/* Fallback to show creating state if expanded but empty */}
+      {isExpanded && node.children?.length === 0 && isCreatingHere && (
+        <div className="text-[11px] text-[var(--color-text-muted)] px-3 py-1 italic" style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}>
+          Directory empty...
+        </div>
+      )}
+    </>
+  )
+}
+
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const { tabs, activeId, contents, setContent } = useEditorStore()
+  const { notes, folders, tabs, activeId, contents, setContent, fetchNotes, createNewNote, createFolder, collapseAllFolders, saveNote } = useEditorStore()
   const { theme, toggleTheme } = useTheme()
+  const [creating, setCreating] = useState<{ type: 'file' | 'folder', parentPath: string } | null>(null)
 
-  const activeContent = contents[activeId] ?? INITIAL_CONTENT
+  useEffect(() => {
+    fetchNotes()
+  }, [fetchNotes])
+
+  // Simple debounce logic for saving
+  useEffect(() => {
+    if (!activeId) return
+    const currentContent = contents[activeId]
+    if (currentContent === undefined) return
+    
+    let title = activeId.split('/').pop() || activeId
+    const firstLineMatch = currentContent.match(/^#?\s*(.+)$/m)
+    if (firstLineMatch) {
+      title = firstLineMatch[1].trim()
+    }
+
+    const handler = setTimeout(() => {
+      const existingNote = notes.find(n => n.id === activeId)
+      if (existingNote && existingNote.content === currentContent && existingNote.title === title) {
+        return
+      }
+      saveNote(activeId, title, currentContent)
+    }, 1000)
+
+    return () => clearTimeout(handler)
+  }, [activeId, contents, saveNote, notes])
+
+  const activeContent = activeId ? (contents[activeId] ?? '') : ''
+  const treeNodes = useMemo(() => buildTree(notes, folders), [notes, folders])
+
+  // Determine where to create new files by default
+  const getActiveParentPath = () => {
+    if (!activeId) return ''
+    const parts = activeId.split('/')
+    parts.pop() // remove file name
+    return parts.join('/')
+  }
+
+  const handleStartCreate = (type: 'file' | 'folder') => {
+    const parentPath = getActiveParentPath()
+    
+    // Automatically expand parent path if not empty
+    if (parentPath) {
+      useEditorStore.getState().toggleFolder(parentPath) // Ensure it's inside expandedFolders
+      // We push strictly if missing to avoid toggling off
+      const { expandedFolders } = useEditorStore.getState()
+      if (!expandedFolders.includes(parentPath)) {
+         useEditorStore.setState(s => { s.expandedFolders.push(parentPath) })
+      }
+    }
+    
+    setCreating({ type, parentPath })
+  }
+
+  const handleCommitCreate = async (path: string) => {
+    if (creating?.type === 'file') {
+      await createNewNote(path)
+    } else if (creating?.type === 'folder') {
+      await createFolder(path)
+    }
+    setCreating(null)
+  }
 
   return (
     <div className="grid h-full w-full overflow-hidden" style={{ gridTemplateColumns: 'var(--width-activitybar) auto 1fr' }}>
@@ -100,25 +403,74 @@ export function AppShell() {
         aria-label="Explorer"
         aria-hidden={!sidebarOpen}
       >
-        <div className="px-4 py-3 text-[11px] font-semibold tracking-widest uppercase text-[var(--color-text-secondary)] border-b border-[var(--color-border-subtle)] shrink-0 whitespace-nowrap overflow-hidden">
-          Explorer
+        <div className="flex justify-between items-center px-4 py-3 shrink-0 border-b border-[var(--color-border-subtle)] group z-10 bg-[var(--color-sidebar-bg)]">
+          <span className="text-[11px] font-semibold tracking-widest uppercase text-[var(--color-text-secondary)] whitespace-nowrap overflow-hidden">
+            Synapse Vault
+          </span>
+          <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1 rounded hover:bg-[var(--color-surface-hover)] transition-colors" onClick={() => handleStartCreate('file')} title="New File">
+              <IconNewFile />
+            </button>
+            <button className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1 rounded hover:bg-[var(--color-surface-hover)] transition-colors" onClick={() => handleStartCreate('folder')} title="New Folder">
+              <IconNewFolder />
+            </button>
+            <button className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1 rounded hover:bg-[var(--color-surface-hover)] transition-colors" onClick={() => fetchNotes()} title="Refresh Explorer">
+              <IconRefresh />
+            </button>
+            <button className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1 rounded hover:bg-[var(--color-surface-hover)] transition-colors" onClick={() => collapseAllFolders()} title="Collapse Folders">
+              <IconCollapseAll />
+            </button>
+          </div>
         </div>
-        <div className="flex-1 overflow-auto p-2">
-          <p className="text-[11px] text-[var(--color-text-muted)] px-2 whitespace-nowrap">No vault open</p>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden py-2" onClick={() => {
+           // Optional: clear creating state or reset parent path to '' if clicked on empty area
+        }}>
+          {creating?.parentPath === '' && (
+            <InlineInput 
+              type={creating.type} 
+              depth={0} 
+              onCommit={handleCommitCreate} 
+              onCancel={() => setCreating(null)} 
+            />
+          )}
+          {treeNodes.length === 0 && !creating ? (
+            <div className="flex flex-col items-center justify-center pt-8 px-4 gap-3 text-center">
+               <p className="text-[12px] text-[var(--color-text-muted)]">You have not opened a folder.</p>
+               <button onClick={() => handleStartCreate('file')} className="px-3 py-1.5 bg-[var(--color-accent)] text-white text-[12px] rounded font-medium hover:opacity-90 transition-opacity w-full">Create Note</button>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {treeNodes.map(node => (
+                <TreeNode 
+                  key={node.path} 
+                  node={node} 
+                  creatingState={creating}
+                  onCommitCreate={handleCommitCreate}
+                  onCancelCreate={() => setCreating(null)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </aside>
 
       <main className="flex flex-col overflow-hidden bg-[var(--color-editor-bg)] min-w-0">
         <TabBar tabs={tabs} activeId={activeId} />
-        {tabs.length > 0 ? (
+        {activeId ? (
           <MarkdownEditor
             key={activeId}
             content={activeContent}
             onChange={(v) => setContent(activeId, v)}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-[13px] text-[var(--color-text-muted)]">
-            Press + to open a new tab
+          <div className="flex-1 flex flex-col items-center justify-center text-[13px] text-[var(--color-text-muted)] gap-4">
+             <div className="opacity-50">
+               <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                 <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2-2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                 <polyline points="14 2 14 8 20 8"></polyline>
+               </svg>
+             </div>
+             Click a note in the explorer or press <button className="font-semibold text-[color:var(--color-accent)] hover:underline" onClick={() => handleStartCreate('file')}>create a new file</button>.
           </div>
         )}
       </main>

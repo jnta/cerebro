@@ -27,7 +27,7 @@ public class NoteResource {
     }
 
     @GET
-    @Path("/{id}")
+    @Path("/{id: .+}")
     public NoteDTO getNote(@PathParam("id") String id) {
         return noteUseCases.getNote(id);
     }
@@ -39,15 +39,30 @@ public class NoteResource {
     }
 
     @PUT
-    @Path("/{id}")
+    @Path("/{id: .+}")
     public NoteDTO updateNote(@PathParam("id") String id, UpdateNoteCommand command) {
         return noteUseCases.updateNote(id, command);
     }
 
     @DELETE
-    @Path("/{id}")
+    @Path("/{id: .+}")
     public Response deleteNote(@PathParam("id") String id) {
         noteUseCases.deleteNote(id);
         return Response.noContent().build();
     }
+
+    @POST
+    @Path("/folders")
+    public Response createFolder(CreateFolderRequest request) {
+        noteUseCases.createFolder(request.path());
+        return Response.status(Response.Status.CREATED).build();
+    }
+
+    @GET
+    @Path("/folders")
+    public List<String> getAllFolders() {
+        return noteUseCases.getAllFolders();
+    }
+
+    public record CreateFolderRequest(String path) {}
 }

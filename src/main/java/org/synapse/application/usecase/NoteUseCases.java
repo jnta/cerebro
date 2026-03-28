@@ -35,7 +35,24 @@ public class NoteUseCases {
     }
 
     public NoteDTO createNote(CreateNoteCommand command) {
-        NoteId newId = new NoteId(UUID.randomUUID().toString());
+        String slug = command.title().toLowerCase()
+                .replaceAll("[^a-z0-9\\-]", "-")
+                .replaceAll("-+", "-")
+                .replaceAll("^-|-$", "");
+        
+        if (slug.isEmpty()) {
+            slug = "untitled-" + UUID.randomUUID().toString().substring(0, 8);
+        }
+        
+        NoteId newId = new NoteId(slug);
+        
+        // Ensure uniqueness
+        int counter = 1;
+        while (noteRepository.findById(newId).isPresent()) {
+            newId = new NoteId(slug + "-" + counter);
+            counter++;
+        }
+
         Path logicalPath = Path.of(newId.value() + ".md");
 
         Note note = Note.builder()
@@ -60,5 +77,13 @@ public class NoteUseCases {
 
     public void deleteNote(String id) {
         noteRepository.delete(new NoteId(id));
+    }
+
+    public void createFolder(String path) {
+        noteRepository.createFolder(path);
+    }
+
+    public List<String> getAllFolders() {
+        return noteRepository.findAllFolders();
     }
 }
