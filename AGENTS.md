@@ -258,4 +258,13 @@ Query
 2. **Human-readable files:** Markdown on disk is the source of truth. The database is a cache.
 3. **Non-blocking UI:** Embedding generation and indexing must not block the main thread.
 4. **< 200ms search:** User-visible search results must be delivered within 200ms.
-5. **No passive summarization:** The system quiz-gates AI summaries to prevent passive reading.
+---
+
+## 10. Agent Skills
+
+Agent skills are specialized knowledge bases located in `.agents/skills/` that provide deep context for specific subsystems.
+
+| Skill | Path | Focus |
+|-------|------|-------|
+| **Tiptap Markdown Editor** | `.agents/skills/tiptap/SKILL.md` | Expertise in Tiptap integration, synchronization, and Markdown conversion. |
+

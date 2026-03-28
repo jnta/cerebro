@@ -18,4 +18,5 @@ export default defineConfig({
       },
     },
   },
+  // Trigger reload to clear stale deps
 })
