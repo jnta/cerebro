@@ -3,6 +3,7 @@ plugins {
     // in each subproject's classloader
     kotlin("multiplatform").apply(false)
     id("org.jetbrains.compose").apply(false)
+    kotlin("plugin.compose").version("2.1.20").apply(false)
     id("io.gitlab.arturbosch.detekt") version "1.23.6"
 }
 
