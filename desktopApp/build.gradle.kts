@@ -9,7 +9,7 @@ plugins {
 kotlin {
     jvm()
     sourceSets {
-        getting {
+        val jvmMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(project(":shared"))
