@@ -3,15 +3,8 @@ package editor
 import androidx.compose.runtime.Immutable
 import editor.ast.NoteNode
 import editor.ast.AstParser
+import dev.synapse.domain.model.Note
 
-@Immutable
-data class Note(
-    val id: String,
-    val title: String,
-    val snippet: String,
-    val lastModified: Long,
-    val viewCount: Int = 0
-)
 
 
 
@@ -24,12 +17,14 @@ data class TextBlock(
 
 @Immutable
 data class EditorUiState(
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val notes: List<Note> = emptyList(),
     val selectedNoteId: String? = null,
+    val navigationStack: List<String> = emptyList(), // Breadcrumb history
     val blocks: List<TextBlock> = emptyList(),
     val focusedBlockId: String? = null,
     val isSidebarVisible: Boolean = true,
+    val isContextPanelVisible: Boolean = true,
     val showResonanceFilter: Boolean = false,
     val originalThought: String = "",
     val minThoughtLength: Int = 50
@@ -48,6 +43,7 @@ sealed interface EditorUiEvent {
 
     data object CreateNewNote : EditorUiEvent
     data object ToggleSidebar : EditorUiEvent
+    data object ToggleContextPanel : EditorUiEvent
     data object SaveCurrentNote : EditorUiEvent 
     data object TriggerSearch : EditorUiEvent
     

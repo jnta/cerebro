@@ -1,5 +1,7 @@
 package editor
 
+import dev.synapse.domain.model.Note
+
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.animation.AnimatedVisibility
@@ -37,131 +39,135 @@ fun EditorScreen(viewModel: EditorViewModel) {
     Row(
         modifier = Modifier
             .fillMaxSize()
+            .background(SynapseColors.Background) // Sleek dark mode background
             .onPreviewKeyEvent { event ->
-                if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.N) {
-                    viewModel.onEvent(EditorUiEvent.CreateNewNote)
-                    true
+                if (event.type == KeyEventType.KeyDown && event.isCtrlPressed) {
+                    when (event.key) {
+                        Key.N -> {
+                            viewModel.onEvent(EditorUiEvent.CreateNewNote)
+                            true
+                        }
+                        Key.S -> {
+                            viewModel.onEvent(EditorUiEvent.SaveCurrentNote)
+                            true
+                        }
+                        Key.I -> {
+                            viewModel.onEvent(EditorUiEvent.ToggleContextPanel)
+                            true
+                        }
+                        else -> false
+                    }
                 } else {
                     false
                 }
             }
     ) {
-        // Sidebar
+        // LeftNav: Fixed Sidebar
         AnimatedVisibility(visible = state.isSidebarVisible) {
-            Sidebar(
+            LeftNav(
                 notes = state.notes,
                 selectedNoteId = state.selectedNoteId,
-                onEvent = viewModel::onEvent,
-                modifier = Modifier.width(300.dp).fillMaxHeight()
-            )
-        }
-
-        Divider(modifier = Modifier.width(1.dp).fillMaxHeight())
-
-        // Main Editor Area
-        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            EditorToolbar(
-                isSidebarVisible = state.isSidebarVisible,
                 onEvent = viewModel::onEvent
             )
-            
-            BlockEditorArea(
-                blocks = state.blocks,
-                focusedBlockId = state.focusedBlockId,
-                shouldMask = (state.notes.find { 
-                    it.id == state.selectedNoteId 
-                }?.viewCount ?: 0) >= 2,
-                onEvent = viewModel::onEvent,
-                modifier = Modifier.weight(1f).fillMaxWidth()
-            )
         }
-    }
-    
-    // Resonance Filter Modal
-    if (state.showResonanceFilter) {
-        AlertDialog(
-            onDismissRequest = { /* Force interaction */ },
-            title = { Text("The Resonance Filter", style = MaterialTheme.typography.h6) },
-            text = {
-                Column {
-                    Text(
-                        "Silent saves are blocked. Friction as a feature.",
-                        style = MaterialTheme.typography.body2,
-                        color = Color.Gray
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Synthesis required: Add at least ${state.minThoughtLength} " +
-                        "characters of 'Original Thought' to commit this note.",
-                        style = MaterialTheme.typography.body1
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = state.originalThought,
-                        onValueChange = { 
-                            viewModel.onEvent(EditorUiEvent.UpdateOriginalThought(it)) 
-                        },
-                        modifier = Modifier.fillMaxWidth().height(120.dp),
-                        placeholder = { Text("Synthesis/Reflection...") },
-                        label = { Text("Original Thought") }
-                    )
-                    Text(
-                        "${state.originalThought.length} / ${state.minThoughtLength}",
-                        modifier = Modifier.align(Alignment.End),
-                        style = MaterialTheme.typography.caption,
-                        color = if (state.originalThought.length >= state.minThoughtLength) {
-                            Color.Green 
-                        } else {
-                            Color.Red
-                        }
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.onEvent(EditorUiEvent.CommitNote) },
-                    enabled = state.originalThought.length >= state.minThoughtLength
+
+        // EditorViewport: Center Fluid Area
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .background(SynapseColors.Surface)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                BreadcrumbTrail(
+                    navigationStack = state.navigationStack,
+                    notes = state.notes,
+                    onEvent = viewModel::onEvent
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.TopCenter
                 ) {
-                    Text("Commit to Vault")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { /* Could add cancel if needed */ }) {
-                    Text("Cancel")
+                    Column(
+                        modifier = Modifier
+                            .widthIn(max = SynapseDimensions.MaxEditorWidth) // Max-width 800px constraint
+                            .fillMaxHeight()
+                            .padding(horizontal = SynapseDimensions.EditorHorizontalPadding)
+                    ) {
+                        if (state.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 100.dp),
+                                color = MaterialTheme.colors.primary
+                            )
+                        } else if (state.selectedNoteId == null) {
+                            EmptyEditorState(onEvent = viewModel::onEvent)
+                        } else {
+                            BlockEditorArea(
+                                blocks = state.blocks,
+                                focusedBlockId = state.focusedBlockId,
+                                shouldMask = (state.notes.find { 
+                                    it.id == state.selectedNoteId 
+                                }?.viewCount ?: 0) >= 2,
+                                onEvent = viewModel::onEvent,
+                                modifier = Modifier.weight(1f).fillMaxWidth()
+                            )
+                        }
+                    }
                 }
             }
-        )
+        }
+
+        // ContextPanel: Right Sidebar
+        AnimatedVisibility(visible = state.isContextPanelVisible) {
+            ContextPanel(onEvent = viewModel::onEvent)
+        }
+    }
+
+    // Resonance Filter Modal (existing logic preserved)
+    if (state.showResonanceFilter) {
+        ResonanceFilterModal(state, viewModel)
     }
 }
 
 @Composable
-fun Sidebar(
+fun LeftNav(
     notes: List<Note>,
     selectedNoteId: String?,
-    onEvent: (EditorUiEvent) -> Unit,
-    modifier: Modifier = Modifier
+    onEvent: (EditorUiEvent) -> Unit
 ) {
-    Column(modifier = modifier.background(MaterialTheme.colors.surface)) {
-        // Sidebar Header
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Cerebro Vault", style = MaterialTheme.typography.h6)
-            Row {
-                IconButton(onClick = { onEvent(EditorUiEvent.TriggerSearch) }) {
-                    Icon(Icons.Default.Search, contentDescription = "Search Notes")
-                }
-                IconButton(onClick = { onEvent(EditorUiEvent.CreateNewNote) }) {
-                    Icon(Icons.Default.Add, contentDescription = "New Note")
-                }
-            }
-        }
-        
-        Divider()
+    Column(
+        modifier = Modifier
+            .width(SynapseDimensions.LeftNavWidth)
+            .fillMaxHeight()
+            .background(SynapseColors.Panel)
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "SYNAPSE",
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                fontSize = SynapseTypography.BrandFontSize,
+                letterSpacing = SynapseTypography.BrandLetterSpacing,
+                color = Color.Gray.copy(alpha = 0.7f)
+            ),
+            modifier = Modifier.padding(bottom = 32.dp, start = 8.dp)
+        )
 
-        // Notes List
+        PerspectiveList()
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = "VAULT",
+            style = MaterialTheme.typography.overline,
+            color = Color.Gray.copy(alpha = 0.5f),
+            modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+        )
+
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(notes, key = { it.id }) { note ->
                 val onClick = remember(note.id) { { onEvent(EditorUiEvent.SelectNote(note.id)) } }
@@ -176,60 +182,223 @@ fun Sidebar(
 }
 
 @Composable
+fun PerspectiveList() {
+    val perspectives = listOf(
+        "#Captura" to SynapseColors.PerspectiveCapture,
+        "#Referência" to SynapseColors.PerspectiveReference,
+        "#Síntese" to SynapseColors.PerspectiveSynthesis,
+        "#Mapa" to SynapseColors.PerspectiveMap
+    )
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        perspectives.forEach { (name, color) ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { }
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(color, shape = androidx.compose.foundation.shape.CircleShape)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.body2,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BreadcrumbTrail(
+    navigationStack: List<String>,
+    notes: List<Note>,
+    onEvent: (EditorUiEvent) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = SynapseDimensions.BreadcrumbHorizontalPadding, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        navigationStack.forEachIndexed { index, noteId ->
+            val noteTitle = notes.find { it.id == noteId }?.title ?: "Untitled"
+            
+            Text(
+                text = noteTitle,
+                style = MaterialTheme.typography.caption,
+                color = if (index == navigationStack.lastIndex) Color.White else Color.Gray,
+                modifier = Modifier.clickable { onEvent(EditorUiEvent.SelectNote(noteId)) }
+            )
+            
+            if (index < navigationStack.lastIndex) {
+                Text(
+                    text = " / ",
+                    style = MaterialTheme.typography.caption,
+                    color = Color.Gray.copy(alpha = 0.3f),
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ContextPanel(@Suppress("UNUSED_PARAMETER") onEvent: (EditorUiEvent) -> Unit) {
+    Column(
+        modifier = Modifier
+            .width(SynapseDimensions.ContextPanelWidth)
+            .fillMaxHeight()
+            .background(SynapseColors.Panel)
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "RESONANCE",
+            style = MaterialTheme.typography.overline,
+            color = Color.Gray.copy(alpha = 0.5f)
+        )
+        
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = "Press Ctrl+I to resonate",
+                style = MaterialTheme.typography.caption,
+                color = Color.Gray.copy(alpha = 0.4f)
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyEditorState(onEvent: (EditorUiEvent) -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            "Select or create a note to begin", 
+            style = MaterialTheme.typography.h6,
+            color = Color.Gray
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = { onEvent(EditorUiEvent.CreateNewNote) },
+            colors = ButtonDefaults.buttonColors(backgroundColor = SynapseColors.Primary, contentColor = Color.White)
+        ) {
+            Text("Create New Note")
+        }
+    }
+}
+
+@Composable
+fun ResonanceFilterModal(state: EditorUiState, viewModel: EditorViewModel) {
+    AlertDialog(
+        onDismissRequest = { /* Force interaction */ },
+        backgroundColor = SynapseColors.Selection,
+        contentColor = Color.White,
+        title = { Text("The Resonance Filter", style = MaterialTheme.typography.h6) },
+        text = {
+            Column {
+                Text(
+                    "Silent saves are blocked. Friction as a feature.",
+                    style = MaterialTheme.typography.body2,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Synthesis required: Add at least ${state.minThoughtLength} " +
+                    "characters of 'Original Thought' to commit this note.",
+                    style = MaterialTheme.typography.body1
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = state.originalThought,
+                    onValueChange = { 
+                        viewModel.onEvent(EditorUiEvent.UpdateOriginalThought(it)) 
+                    },
+                    modifier = Modifier.fillMaxWidth().height(150.dp),
+                    placeholder = { Text("Synthesis/Reflection...", color = Color.Gray) },
+                    label = { Text("Original Thought") },
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        textColor = Color.White,
+                        cursorColor = Color.White,
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color.Gray
+                    )
+                )
+                Text(
+                    "${state.originalThought.length} / ${state.minThoughtLength}",
+                    modifier = Modifier.align(Alignment.End),
+                    style = MaterialTheme.typography.caption,
+                    color = if (state.originalThought.length >= state.minThoughtLength) {
+                        SynapseColors.Success 
+                    } else {
+                        SynapseColors.Error
+                    }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { viewModel.onEvent(EditorUiEvent.CommitNote) },
+                enabled = state.originalThought.length >= state.minThoughtLength,
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = if (state.originalThought.length >= state.minThoughtLength) {
+                        SynapseColors.Primary 
+                    } else {
+                        Color.Gray
+                    },
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Commit to Vault")
+            }
+        }
+    )
+}
+
+@Composable
 fun NoteListItem(
     note: Note, 
     isSelected: Boolean, 
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor = if (isSelected) MaterialTheme.colors.primary.copy(alpha = 0.1f) else Color.Transparent
+    val backgroundColor = if (isSelected) SynapseColors.Selection else Color.Transparent
     
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .background(backgroundColor)
-            .padding(16.dp)
+            .background(backgroundColor, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+            .padding(12.dp)
     ) {
         Text(
             text = note.title.ifEmpty { "Untitled" },
-            style = MaterialTheme.typography.subtitle1,
-            color = if (isSelected) MaterialTheme.colors.primary else MaterialTheme.colors.onSurface
+            style = MaterialTheme.typography.subtitle2,
+            color = if (isSelected) Color.White else Color.Gray,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = note.snippet.ifEmpty { "No additional text..." },
-            style = MaterialTheme.typography.body2,
-            color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f),
-            maxLines = 2
-        )
+        if (note.snippet.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = note.snippet,
+                style = MaterialTheme.typography.caption,
+                color = Color.Gray.copy(alpha = 0.5f),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
     }
-    Divider()
 }
 
-@Composable
-fun EditorToolbar(
-    isSidebarVisible: Boolean, 
-    onEvent: (EditorUiEvent) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.fillMaxWidth().padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (!isSidebarVisible) {
-            IconButton(onClick = { onEvent(EditorUiEvent.ToggleSidebar) }) {
-                Icon(Icons.Default.Menu, contentDescription = "Toggle Sidebar")
-            }
-        } else {
-            IconButton(onClick = { onEvent(EditorUiEvent.ToggleSidebar) }) {
-                Icon(Icons.Default.Menu, contentDescription = "Toggle Sidebar")
-            }
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("Block Editor", style = MaterialTheme.typography.subtitle2, color = Color.Gray)
-    }
-}
 
 
 

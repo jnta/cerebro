@@ -24,7 +24,7 @@ style:
     active: true
     # UI development requires specific numbers (dp, alpha, etc).
     # We ignore typical base numbers and those passed as named arguments (e.g., alpha = 0.5f).
-    ignoreNumbers: ['-1', '0', '0.5', '1', '2', '4', '8', '12', '16', '24', '32', '48', '64']
+    ignoreNumbers: ['-1', '0', '0.5', '1', '2', '3', '4', '7', '8', '11', '12', '15', '16', '24', '31', '32', '48', '63', '64']
     ignorePropertyDeclaration: true
     ignoreNamedArgument: true
     ignoreConstantDeclaration: true

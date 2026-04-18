@@ -1,7 +1,7 @@
-# Cerebro 🧠
+# Synapse 🧠
 > The AI-Native Cognitive Gym (Active Learning & Desirable Difficulty).
 
-Cerebro is a local-first, high-friction knowledge management system designed to transform passive consumption into active mastery. Built on the principle of **"Friction as a Feature"**, it forces synthesis and reflection rather than simple storage.
+Synapse is a local-first, high-friction knowledge management system designed to transform passive consumption into active mastery. Built on the principle of **"Friction as a Feature"**, it forces synthesis and reflection rather than simple storage.
 
 ## 🚀 Getting Started
 
