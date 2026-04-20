@@ -70,6 +70,7 @@ sealed interface EditorUiEvent {
     data class UpdateOriginalThought(val text: String) : EditorUiEvent
     data object CommitNote : EditorUiEvent
 
+    data class UpdateNoteTitle(val title: String) : EditorUiEvent
     data class NoteOverflow(val blockId: String) : EditorUiEvent
     data object Resonate : EditorUiEvent
     data class LinkNotes(val sourceNoteId: String, val targetNoteId: String) : EditorUiEvent

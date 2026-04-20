@@ -82,22 +82,24 @@ fun getBlockTextStyle(node: editor.ast.NoteNode.BlockNode): TextStyle {
     return when (node) {
         is editor.ast.NoteNode.BlockNode.Heading -> {
             val fontSize = when (node.level) {
-                1 -> 28.sp
-                2 -> 24.sp
-                else -> 20.sp
+                1 -> 32.sp
+                2 -> 28.sp
+                else -> 24.sp
             }
             TextStyle(
                 color = MaterialTheme.colors.onBackground,
                 fontSize = fontSize,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                lineHeight = fontSize * 1.3
+                fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+                lineHeight = fontSize * 1.3,
+                letterSpacing = (-0.5).sp
             )
         }
         else -> TextStyle(
             color = MaterialTheme.colors.onBackground,
-            fontSize = 16.sp,
-            lineHeight = 24.sp,
-            fontStyle = androidx.compose.ui.text.font.FontStyle.Normal
+            fontSize = 17.sp,
+            lineHeight = 26.sp,
+            fontStyle = androidx.compose.ui.text.font.FontStyle.Normal,
+            letterSpacing = (-0.2).sp
         )
     }
 }

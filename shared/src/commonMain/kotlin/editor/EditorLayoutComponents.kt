@@ -72,12 +72,15 @@ fun formatTimestamp(timestamp: Long): String {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun NoteHeader(note: Note) {
+fun NoteHeader(
+    note: Note,
+    onEvent: (EditorUiEvent) -> Unit
+) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 48.dp)
+        modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             note.attributes.filter { it.key == "tag" }.forEach { tag ->
@@ -85,54 +88,51 @@ fun NoteHeader(note: Note) {
                     modifier = Modifier
                         .background(
                             SynapseColors.SurfaceContainerHigh,
-                            shape = androidx.compose.foundation.shape.CircleShape
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
                         )
-                        .padding(horizontal = 12.dp, vertical = 2.dp)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = "#${tag.value.uppercase()}",
+                        text = tag.value.uppercase(),
                         style = TextStyle(
                             fontSize = SynapseTypography.TagFontSize,
-                            fontWeight = FontWeight.Medium,
-                            letterSpacing = 0.5.sp
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
                         ),
                         color = SynapseColors.OnSurfaceVariant
                     )
                 }
             }
         }
-        Text(
-            text = note.title,
-            style = TextStyle(
-                fontSize = 36.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-1).sp,
-                lineHeight = 44.sp
+        
+        androidx.compose.foundation.text.BasicTextField(
+            value = note.title,
+            onValueChange = { onEvent(EditorUiEvent.UpdateNoteTitle(it)) },
+            textStyle = TextStyle(
+                fontSize = 42.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-1.5).sp,
+                lineHeight = 52.sp,
+                color = SynapseColors.Primary
             ),
-            color = SynapseColors.Primary
+            modifier = Modifier.fillMaxWidth(),
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(SynapseColors.Primary),
+            decorationBox = { innerTextField ->
+                if (note.title.isEmpty()) {
+                    Text(
+                        text = "Untitled Note",
+                        style = TextStyle(
+                            fontSize = 42.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-1.5).sp,
+                            lineHeight = 52.sp,
+                            color = SynapseColors.OnSurfaceVariant.copy(alpha = 0.3f)
+                        )
+                    )
+                }
+                innerTextField()
+            }
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.DateRange,
-                contentDescription = "Created",
-                tint = Color.Gray.copy(alpha = 0.6f),
-                modifier = Modifier.size(14.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = "Created: ${formatTimestamp(note.createdAt)}".uppercase(),
-                style = TextStyle(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = SynapseTypography.MetadataFontSize,
-                    letterSpacing = (-0.5).sp
-                ),
-                color = Color.Gray.copy(alpha = 0.6f)
-            )
-        }
     }
 }
 

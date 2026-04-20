@@ -93,6 +93,15 @@ class EditorViewModel(
     private fun handleNoteEvent(event: EditorUiEvent): Boolean {
         return when (event) {
             is EditorUiEvent.SelectNote -> { selectNote(event.noteId); true }
+            is EditorUiEvent.UpdateNoteTitle -> {
+                _state.update { state ->
+                    val updatedNotes = state.notes.map { note ->
+                        if (note.id == state.noteId) note.copy(title = event.title) else note
+                    }
+                    state.copy(notes = updatedNotes)
+                }
+                true
+            }
             is EditorUiEvent.MapsTo -> { selectNote(event.noteId); true }
             is EditorUiEvent.Resonate -> { resonate(); true }
             is EditorUiEvent.NoteOverflow -> { handleNoteOverflow(event.blockId); true }
@@ -227,11 +236,13 @@ class EditorViewModel(
         if (selectedId == null) return
         val fullContent = _state.value.blocks.joinToString("\n\n") { it.content }
         
-        val derivedTitle = _state.value.blocks.firstOrNull()?.content
-            ?.lineSequence()?.firstOrNull()?.removePrefix("# ")?.take(MAX_TITLE_LENGTH) ?: "Untitled"
-
         coroutineScope.launch {
             val existingNote = repository.getNoteById(selectedId)
+            
+            // Prioritize the title from the state (which might have been manually renamed)
+            val currentTitle = _state.value.notes.find { it.id == selectedId }?.title
+            val derivedTitle = currentTitle?.ifEmpty { null } ?: _state.value.blocks.firstOrNull()?.content
+                ?.lineSequence()?.firstOrNull()?.removePrefix("# ")?.take(MAX_TITLE_LENGTH) ?: "Untitled"
             val extractedEdges = NoteParser.extractEdges(selectedId, fullContent)
             
             // Resolve Titles to IDs

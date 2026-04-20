@@ -16,25 +16,25 @@ class MarkdownVisualTransformation(private val shouldMask: Boolean = false) : Vi
         // Bold: **text**
         Regex("\\*\\*(.*?)\\*\\*").findAll(text.text).forEach { match ->
             builder.addStyle(SpanStyle(fontWeight = FontWeight.Bold), match.range.first, match.range.last + 1)
-            builder.addStyle(SpanStyle(color = Color.LightGray), match.range.first, match.range.first + 2)
-            builder.addStyle(SpanStyle(color = Color.LightGray), match.range.last - 1, match.range.last + 1)
+            builder.addStyle(SpanStyle(color = Color.Transparent), match.range.first, match.range.first + 2)
+            builder.addStyle(SpanStyle(color = Color.Transparent), match.range.last - 1, match.range.last + 1)
         }
         
         // Italic: _text_
         Regex("_(.*?)_").findAll(text.text).forEach { match ->
             builder.addStyle(SpanStyle(fontStyle = FontStyle.Italic), match.range.first, match.range.last + 1)
-            builder.addStyle(SpanStyle(color = Color.LightGray), match.range.first, match.range.first + 1)
-            builder.addStyle(SpanStyle(color = Color.LightGray), match.range.last, match.range.last + 1)
+            builder.addStyle(SpanStyle(color = Color.Transparent), match.range.first, match.range.first + 1)
+            builder.addStyle(SpanStyle(color = Color.Transparent), match.range.last, match.range.last + 1)
         }
 
         // Headings: #, ##, ###
         Regex("^(#+ )").findAll(text.text).forEach { match ->
-            builder.addStyle(SpanStyle(color = Color.LightGray.copy(alpha = 0.5f)), match.range.first, match.range.last)
+            builder.addStyle(SpanStyle(color = Color.Transparent), match.range.first, match.range.last)
         }
 
         // List items: - , * 
         Regex("^([-*] )").findAll(text.text).forEach { match ->
-            builder.addStyle(SpanStyle(color = Color.LightGray.copy(alpha = 0.5f)), match.range.first, match.range.last)
+            builder.addStyle(SpanStyle(color = Color.Transparent), match.range.first, match.range.last)
         }
 
         // Color Initial Intents (e.g. [F], [T])

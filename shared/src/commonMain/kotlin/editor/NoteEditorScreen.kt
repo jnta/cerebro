@@ -67,7 +67,7 @@ private fun EditorContentColumn(
         modifier = Modifier
             .widthIn(max = SynapseDimensions.MaxEditorWidth)
             .fillMaxHeight()
-            .padding(top = 64.dp)
+            .padding(top = 80.dp)
             .padding(horizontal = SynapseDimensions.EditorHorizontalPadding)
     ) {
         if (state.isLoading) {
@@ -80,7 +80,7 @@ private fun EditorContentColumn(
         } else {
             val currentNote = state.notes.find { it.id == state.noteId }
             if (currentNote != null) {
-                NoteHeader(note = currentNote)
+                NoteHeader(note = currentNote, onEvent = onEvent)
                 Spacer(modifier = Modifier.height(24.dp))
             }
             BlockEditorArea(
@@ -114,7 +114,7 @@ fun BlockEditorArea(
         }
     }
 
-    Box(modifier = modifier.padding(16.dp)) {
+    Box(modifier = modifier) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(blocks, key = { block -> block.id }) { block ->
                 val focusRequester = remember { FocusRequester() }
@@ -167,18 +167,6 @@ fun BlockItem(
             .background(Color.Transparent),
         verticalAlignment = Alignment.Top
     ) {
-        BlockPrefix(block)
-
-        // Drag Handle (Visual Placeholder)
-        Icon(
-            imageVector = Icons.Default.Menu,
-            contentDescription = "Reorder",
-            tint = Color.Gray.copy(alpha = 0.5f),
-            modifier = Modifier
-                .padding(top = 4.dp, end = 8.dp, start = 8.dp)
-                .size(20.dp)
-        )
-
         Box(modifier = Modifier.weight(1f).padding(vertical = 4.dp)) {
             var slashQuery by remember { mutableStateOf("") }
             
