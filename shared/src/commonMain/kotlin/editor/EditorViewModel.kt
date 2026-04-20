@@ -91,6 +91,8 @@ class EditorViewModel(
         }
     }
 
+    private val operations = EditorOperations(coroutineScope, repository, resonanceRepository, _state)
+
     fun onEvent(event: EditorUiEvent) {
         if (!handleNoteEvent(event)) {
             when (event) {
@@ -114,153 +116,73 @@ class EditorViewModel(
 
     private fun handleNoteEvent(event: EditorUiEvent): Boolean {
         return when (event) {
-            is EditorUiEvent.SelectNote -> { selectNote(event.noteId); true }
-            is EditorUiEvent.UpdateNoteTitle -> {
-                _state.update { state ->
-                    val updatedNotes = state.notes.map { note ->
-                        if (note.id == state.noteId) note.copy(title = event.title) else note
-                    }
-                    state.copy(notes = updatedNotes)
-                }
-                true
-            }
-            is EditorUiEvent.MapsTo -> { selectNote(event.noteId); true }
-            is EditorUiEvent.Resonate -> { resonate(); true }
-            is EditorUiEvent.NoteOverflow -> { handleNoteOverflow(event.blockId); true }
-            is EditorUiEvent.CreateNewNote -> {
-                coroutineScope.launch {
-                    val newId = EditorLogic.generateId()
-                    val initialBlock = EditorLogic.createInitialBlock()
-                    val newNote = Note(
-                        id = newId,
-                        title = "Untitled",
-                        content = "",
-                        attributes = emptyList(),
-                        connections = emptyList(),
-                        createdAt = Clock.System.now().toEpochMilliseconds(),
-                        updatedAt = Clock.System.now().toEpochMilliseconds()
-                    )
-                    repository.saveNote(newNote)
-                    _state.update { 
-                        it.copy(
-                            noteId = newId,
-                            currentDestination = "Editor",
-                            navigationStack = EditorLogic.updateNavigationStack(it.navigationStack, newId),
-                            blocks = listOf(initialBlock),
-                            focusedBlockId = initialBlock.id,
-                            showResonanceFilter = false,
-                            originalThought = ""
-                        ) 
-                    }
-                }
+            is EditorUiEvent.SelectNote,
+            is EditorUiEvent.MapsTo -> handleSelectionEvent(event)
+            is EditorUiEvent.UpdateNoteTitle -> handleUpdateNoteTitle(event)
+            is EditorUiEvent.Resonate -> { operations.resonate(); true }
+            is EditorUiEvent.NoteOverflow -> { 
+                operations.handleNoteOverflow(event.blockId) { selectNote(it) }
                 true 
             }
-            is EditorUiEvent.SaveCurrentNote -> { handleSave(isCommit = false); true }
-            is EditorUiEvent.CommitNote -> { handleSave(isCommit = true); true }
+            is EditorUiEvent.CreateNewNote -> { operations.createNewNote(); true }
+            is EditorUiEvent.SaveCurrentNote,
+            is EditorUiEvent.CommitNote,
+            is EditorUiEvent.UpdateNoteCategory -> handlePersistenceEvents(event)
             is EditorUiEvent.UpdateOriginalThought -> { 
                 _state.update { it.copy(originalThought = event.text) }; true 
             }
-            is EditorUiEvent.ToggleSidebar -> { 
-                _state.update { it.copy(isSidebarVisible = !it.isSidebarVisible) }; true 
-            }
-            is EditorUiEvent.ToggleContextPanel -> { 
-                _state.update { it.copy(isContextPanelVisible = !it.isContextPanelVisible) }; true 
-            }
-            is EditorUiEvent.LinkNotes -> { linkNotes(event); true }
+            is EditorUiEvent.ToggleSidebar,
+            is EditorUiEvent.ToggleContextPanel -> handleToggleEvents(event)
+            is EditorUiEvent.LinkNotes -> { operations.linkNotes(event); true }
             is EditorUiEvent.NavigateTo -> {
                 _state.update { it.copy(currentDestination = event.destination) }
                 true
             }
-            is EditorUiEvent.DeleteNote -> {
-                coroutineScope.launch {
-                    repository.deleteNote(event.noteId)
-                    _state.update { state ->
-                        val newNotes = state.notes.filter { it.id != event.noteId }
-                        val newStack = state.navigationStack.filter { it != event.noteId }
-                        val isCurrentNote = state.noteId == event.noteId
-                        state.copy(
-                            notes = newNotes,
-                            noteId = if (isCurrentNote) "" else state.noteId,
-                            blocks = if (isCurrentNote) emptyList() else state.blocks,
-                            navigationStack = newStack,
-                            currentDestination = if (isCurrentNote) "All Notes" else state.currentDestination
-                        )
-                    }
-                }
-                true
-            }
+            is EditorUiEvent.DeleteNote -> { operations.deleteNote(event.noteId); true }
             else -> false
         }
     }
 
-    private fun resonate() {
-        coroutineScope.launch {
-            val currentContent = _state.value.blocks.joinToString("\n\n") { it.content }
-            val resonance = resonanceRepository.getResonance(currentContent)
-            _state.update { it.copy(resonanceItems = resonance) }
+    private fun handlePersistenceEvents(event: EditorUiEvent): Boolean {
+        when (event) {
+            is EditorUiEvent.SaveCurrentNote -> handleSave(isCommit = false)
+            is EditorUiEvent.CommitNote -> handleSave(isCommit = true)
+            is EditorUiEvent.UpdateNoteCategory -> 
+                operations.updateNoteCategory(event.category) { handleSave(isCommit = false) }
+            else -> return false
         }
+        return true
     }
 
-    private fun linkNotes(event: EditorUiEvent.LinkNotes) {
-        coroutineScope.launch {
-            val edge = dev.synapse.domain.model.Edge(
-                id = EditorLogic.generateId(),
-                sourceId = event.sourceNoteId,
-                targetId = event.targetNoteId,
-                label = "manual_link"
-            )
-            repository.getNoteById(event.sourceNoteId)?.let { note ->
-                repository.saveNote(note.copy(connections = note.connections + edge))
-            }
+    private fun handleSelectionEvent(event: EditorUiEvent): Boolean {
+        val noteId = when (event) {
+            is EditorUiEvent.SelectNote -> event.noteId
+            is EditorUiEvent.MapsTo -> event.noteId
+            else -> return false
         }
+        selectNote(noteId)
+        return true
     }
 
-    private fun handleNoteOverflow(blockId: String) {
-        val currentState = _state.value
-        val parentNoteId = currentState.noteId
-        val block = currentState.blocks.find { it.id == blockId } ?: return
-        val content = block.content
-        if (content.isBlank()) return
-
-        coroutineScope.launch {
-            val parentNote = repository.getNoteById(parentNoteId)
-            val inheritedAttributes = parentNote?.attributes?.map { 
-                it.copy(id = EditorLogic.generateId()) 
-            } ?: emptyList()
-
-            val newId = EditorLogic.generateId()
-            val derivedTitle = content.lineSequence()
-                .firstOrNull()?.removePrefix("# ")?.take(MAX_TITLE_LENGTH) ?: "Untitled"
-            
-            val newNote = Note(
-                id = newId,
-                title = derivedTitle,
-                content = content,
-                attributes = inheritedAttributes + NoteParser.extractAttributes(content),
-                connections = listOf(
-                    dev.synapse.domain.model.Edge(
-                        id = EditorLogic.generateId(),
-                        sourceId = newId,
-                        targetId = parentNoteId,
-                        label = "overflow_from"
-                    )
-                ),
-                createdAt = Clock.System.now().toEpochMilliseconds(),
-                updatedAt = Clock.System.now().toEpochMilliseconds()
-            )
-            repository.saveNote(newNote)
-
-            val updatedBlocks = currentState.blocks.filter { it.id != blockId }
-            val newParentContent = updatedBlocks.joinToString("\n\n") { it.content }
-            if (parentNote != null) {
-                repository.saveNote(parentNote.copy(
-                    content = newParentContent,
-                    updatedAt = Clock.System.now().toEpochMilliseconds()
-                ))
-            }
-
-            selectNote(newId)
+    private fun handleToggleEvents(event: EditorUiEvent): Boolean {
+        when (event) {
+            is EditorUiEvent.ToggleSidebar -> 
+                _state.update { it.copy(isSidebarVisible = !it.isSidebarVisible) }
+            is EditorUiEvent.ToggleContextPanel -> 
+                _state.update { it.copy(isContextPanelVisible = !it.isContextPanelVisible) }
+            else -> return false
         }
+        return true
+    }
+
+    private fun handleUpdateNoteTitle(event: EditorUiEvent.UpdateNoteTitle): Boolean {
+        _state.update { state ->
+            val updatedNotes = state.notes.map { note ->
+                if (note.id == state.noteId) note.copy(title = event.title) else note
+            }
+            state.copy(notes = updatedNotes)
+        }
+        return true
     }
 
     private fun handleSave(isCommit: Boolean, isAutoSave: Boolean = false) {
@@ -296,10 +218,14 @@ class EditorViewModel(
                 }
             }
 
+            val currentCategory = _state.value.notes.find { it.id == selectedId }?.category 
+                ?: dev.synapse.domain.model.NoteCategory.RAW
+
             val updatedNote = Note(
                 id = selectedId,
                 title = derivedTitle,
                 content = fullContent,
+                category = currentCategory,
                 attributes = NoteParser.extractAttributes(fullContent),
                 connections = resolvedEdges,
                 createdAt = existingNote?.createdAt ?: Clock.System.now().toEpochMilliseconds(),

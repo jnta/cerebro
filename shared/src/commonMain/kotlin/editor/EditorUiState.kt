@@ -75,4 +75,5 @@ sealed interface EditorUiEvent {
     data object Resonate : EditorUiEvent
     data class LinkNotes(val sourceNoteId: String, val targetNoteId: String) : EditorUiEvent
     data class DeleteNote(val noteId: String) : EditorUiEvent
+    data class UpdateNoteCategory(val category: dev.synapse.domain.model.NoteCategory) : EditorUiEvent
 }

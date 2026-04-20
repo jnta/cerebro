@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS Notes (
     id TEXT NOT NULL PRIMARY KEY,
     title TEXT NOT NULL,
     content_raw TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'RAW',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     view_count INTEGER NOT NULL DEFAULT 0
@@ -31,24 +32,24 @@ CREATE TABLE IF NOT EXISTS Edges (
 );
 
 getNoteMetadataById:
-SELECT id, title, content_raw, updated_at FROM Notes WHERE id = ?;
+SELECT id, title, content_raw, updated_at, category FROM Notes WHERE id = ?;
 
 getAllNoteMetadata:
-SELECT id, title, content_raw, updated_at FROM Notes ORDER BY updated_at DESC;
+SELECT id, title, content_raw, updated_at, category FROM Notes ORDER BY updated_at DESC;
 
 getForwardLinksMetadata:
-SELECT n.id, n.title, n.content_raw, n.updated_at FROM Notes n
+SELECT n.id, n.title, n.content_raw, n.updated_at, n.category FROM Notes n
 JOIN Edges e ON n.id = e.target_id
 WHERE e.source_id = ?;
 
 getBackLinksMetadata:
-SELECT n.id, n.title, n.content_raw, n.updated_at FROM Notes n
+SELECT n.id, n.title, n.content_raw, n.updated_at, n.category FROM Notes n
 JOIN Edges e ON n.id = e.source_id
 WHERE e.target_id = ?;
 
 insertNote:
-INSERT OR REPLACE INTO Notes(id, title, content_raw, created_at, updated_at, view_count)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO Notes(id, title, content_raw, category, created_at, updated_at, view_count)
+VALUES (?, ?, ?, ?, ?, ?, ?);
 
 updateNoteContent:
 UPDATE Notes SET content_raw = ?, updated_at = ? WHERE id = ?;
@@ -110,3 +111,4 @@ DELETE FROM Edges WHERE source_id = ?;
 
 deleteEdgesForNote:
 DELETE FROM Edges WHERE source_id = ? OR target_id = ?;
+

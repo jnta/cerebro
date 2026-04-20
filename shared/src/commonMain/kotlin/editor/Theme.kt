@@ -16,6 +16,10 @@ object SynapseColors {
     val Success = Color(0xFF4CAF50)
     val Error = Color(0xFFBA1A1A)
     
+    val CategoryRaw = Color(0xFFBDBDBD)
+    val CategoryLit = Color(0xFF64B5F6)
+    val CategoryEvergreen = Color(0xFF4CAF50)
+    
     val SurfaceContainerLowest = Color(0xFFFFFFFF)
     val SurfaceContainerLow = Color(0xFFF3F3F5)
     val SurfaceContainer = Color(0xFFEEEEF0)

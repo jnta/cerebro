@@ -15,6 +15,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import dev.synapse.domain.model.NoteMetadata
+import dev.synapse.domain.model.NoteCategory
 
 @Composable
 fun ContextPanel(
@@ -69,7 +70,6 @@ fun ContextPanel(
     }
 }
 
-
 @Composable
 fun LinkCard(note: NoteMetadata, onEvent: (EditorUiEvent) -> Unit) {
     Card(
@@ -78,33 +78,44 @@ fun LinkCard(note: NoteMetadata, onEvent: (EditorUiEvent) -> Unit) {
         elevation = 0.dp,
         modifier = Modifier.fillMaxWidth().clickable { onEvent(EditorUiEvent.SelectNote(note.id)) }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = note.title.ifEmpty { "Untitled" },
-                style = MaterialTheme.typography.subtitle2.copy(fontWeight = FontWeight.Bold),
-                color = SynapseColors.OnSurface
-            )
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CategoryDot(note.category, size = 6.dp, modifier = Modifier.padding(end = 12.dp))
             
-            // Meta-Pills
-            if (note.tags.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    note.tags.take(3).forEach { tag ->
-                        Text(
-                            text = "#${tag.uppercase()}",
-                            style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.5.sp),
-                            color = SynapseColors.OnSurfaceVariant,
-                            modifier = Modifier
-                                .background(
-                                    SynapseColors.SurfaceContainerHigh,
-                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
-                                )
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
-                        )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = note.title.ifEmpty { "Untitled" },
+                    style = MaterialTheme.typography.subtitle2.copy(fontWeight = FontWeight.Bold),
+                    color = SynapseColors.OnSurface
+                )
+                
+                // Meta-Pills
+                if (note.tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        note.tags.take(3).forEach { tag ->
+                            Text(
+                                text = "#${tag.uppercase()}",
+                                style = TextStyle(
+                                    fontSize = 9.sp, 
+                                    fontWeight = FontWeight.Medium, 
+                                    letterSpacing = 0.5.sp
+                                ),
+                                color = SynapseColors.OnSurfaceVariant,
+                                modifier = Modifier
+                                    .background(
+                                        SynapseColors.SurfaceContainerHigh,
+                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
+                                    )
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
             }

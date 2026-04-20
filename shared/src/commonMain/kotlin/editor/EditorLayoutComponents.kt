@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontFamily
 import dev.synapse.domain.model.Note
 import dev.synapse.domain.model.NoteMetadata
 
+import dev.synapse.domain.model.NoteCategory
+
 @Composable
 fun NoteListItem(
     note: Note,
@@ -40,6 +42,8 @@ fun NoteListItem(
             .padding(vertical = 12.dp, horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        CategoryDot(note.category, modifier = Modifier.padding(end = 12.dp))
+        
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = note.title.ifEmpty { "Untitled" },
@@ -69,7 +73,6 @@ fun NoteListItem(
 }
 
 fun formatTimestamp(timestamp: Long): String {
-    // Basic placeholder using the timestamp to satisfy Detekt
     return "${timestamp % 24}h ago"
 }
 
@@ -82,6 +85,12 @@ fun NoteHeader(
     Column(
         modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)
     ) {
+        CategoryTag(
+            category = note.category,
+            onCategorySelected = { onEvent(EditorUiEvent.UpdateNoteCategory(it)) },
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -138,6 +147,7 @@ fun NoteHeader(
         )
     }
 }
+
 
 
 @Composable

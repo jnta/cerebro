@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.synapse.domain.model.Note
+import dev.synapse.domain.model.NoteCategory
 import dev.synapse.domain.model.NoteMetadata
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -94,16 +95,21 @@ private fun NoteGridItem(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = note.title.ifEmpty { "Untitled" },
-                        style = TextStyle(
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SynapseColors.Primary
-                        ),
-                        maxLines = 1,
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, 
                         modifier = Modifier.weight(1f)
-                    )
+                    ) {
+                        CategoryDot(note.category, modifier = Modifier.padding(end = 12.dp))
+                        Text(
+                            text = note.title.ifEmpty { "Untitled" },
+                            style = TextStyle(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SynapseColors.Primary
+                            ),
+                            maxLines = 1
+                        )
+                    }
                     
                     DeleteButton(onDelete = onDelete)
                 }

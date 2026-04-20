@@ -7,11 +7,14 @@ import dev.synapse.domain.model.Note
 import dev.synapse.domain.model.NoteMetadata
 import dev.synapse.domain.model.Attribute
 import dev.synapse.domain.model.Edge
+import dev.synapse.domain.model.NoteCategory
 import dev.synapse.domain.repository.NoteRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+
+private const val SNIPPET_LENGTH = 100
 
 class NoteRepositoryImpl(
     private val database: SynapseDatabase
@@ -38,59 +41,42 @@ class NoteRepositoryImpl(
                     NoteMetadata(
                         id = noteEntity.id,
                         title = noteEntity.title,
-                        snippet = if (noteEntity.content_raw.length > 100) 
-                            noteEntity.content_raw.take(100) + "..." 
+                        snippet = if (noteEntity.content_raw.length > SNIPPET_LENGTH) 
+                            noteEntity.content_raw.take(SNIPPET_LENGTH) + "..." 
                             else noteEntity.content_raw,
                         updatedAt = noteEntity.updated_at,
+                        category = parseCategory(noteEntity.category),
                         tags = queries.getTagsForNote(noteEntity.id).executeAsList()
                     )
                 }
             }
     }
 
+    private fun parseCategory(name: String): NoteCategory {
+        return NoteCategory.entries.find { it.name == name } ?: NoteCategory.RAW
+    }
+
     private fun mapToNote(noteEntity: dev.synapse.database.Notes): Note {
-        val attributes = queries.getAttributesForNote(noteEntity.id).executeAsList().map {
+        val id = noteEntity.id
+        val attributes = queries.getAttributesForNote(id).executeAsList().map {
             Attribute(it.id, it.attr_key, it.attr_value)
         }
-        val edges = queries.getEdgesForNote(noteEntity.id, noteEntity.id).executeAsList().map {
+        val edges = queries.getEdgesForNote(id, id).executeAsList().map {
             Edge(it.id, it.source_id, it.target_id, it.label)
         }
-        val embedding = queries.getEmbedding(noteEntity.id).executeAsOneOrNull()?.let { fromBlob(it) }
+        val embedding = queries.getEmbedding(id).executeAsOneOrNull()?.let { BlobUtils.fromBlob(it) }
         return Note(
-            noteEntity.id,
-            noteEntity.title,
-            noteEntity.content_raw,
-            attributes,
-            edges,
-            noteEntity.created_at,
-            noteEntity.updated_at,
-            noteEntity.view_count.toInt(),
-            embedding
+            id = id,
+            title = noteEntity.title,
+            content = noteEntity.content_raw,
+            category = parseCategory(noteEntity.category),
+            attributes = attributes,
+            connections = edges,
+            createdAt = noteEntity.created_at,
+            updatedAt = noteEntity.updated_at,
+            viewCount = noteEntity.view_count.toInt(),
+            embedding = embedding
         )
-    }
-
-    private fun toBlob(array: FloatArray): ByteArray {
-        val bytes = ByteArray(array.size * 4)
-        for (i in array.indices) {
-            val bits = array[i].toBits()
-            bytes[i * 4] = (bits shr 24).toByte()
-            bytes[i * 4 + 1] = (bits shr 16).toByte()
-            bytes[i * 4 + 2] = (bits shr 8).toByte()
-            bytes[i * 4 + 3] = (bits).toByte()
-        }
-        return bytes
-    }
-
-    private fun fromBlob(bytes: ByteArray): FloatArray {
-        val array = FloatArray(bytes.size / 4)
-        for (i in array.indices) {
-            val bits = (bytes[i * 4].toInt() and 0xFF shl 24) or
-                    (bytes[i * 4 + 1].toInt() and 0xFF shl 16) or
-                    (bytes[i * 4 + 2].toInt() and 0xFF shl 8) or
-                    (bytes[i * 4 + 3].toInt() and 0xFF)
-            array[i] = Float.fromBits(bits)
-        }
-        return array
     }
 
     override suspend fun getNoteById(id: String): Note? = withContext(Dispatchers.IO) {
@@ -110,10 +96,11 @@ class NoteRepositoryImpl(
                     NoteMetadata(
                         id = noteEntity.id,
                         title = noteEntity.title,
-                        snippet = if (noteEntity.content_raw.length > 100) 
-                            noteEntity.content_raw.take(100) + "..." 
+                        snippet = if (noteEntity.content_raw.length > SNIPPET_LENGTH) 
+                            noteEntity.content_raw.take(SNIPPET_LENGTH) + "..." 
                             else noteEntity.content_raw,
                         updatedAt = noteEntity.updated_at,
+                        category = parseCategory(noteEntity.category),
                         tags = queries.getTagsForNote(noteEntity.id).executeAsList()
                     )
                 }
@@ -129,10 +116,11 @@ class NoteRepositoryImpl(
                     NoteMetadata(
                         id = noteEntity.id,
                         title = noteEntity.title,
-                        snippet = if (noteEntity.content_raw.length > 100) 
-                            noteEntity.content_raw.take(100) + "..." 
+                        snippet = if (noteEntity.content_raw.length > SNIPPET_LENGTH) 
+                            noteEntity.content_raw.take(SNIPPET_LENGTH) + "..." 
                             else noteEntity.content_raw,
                         updatedAt = noteEntity.updated_at,
+                        category = parseCategory(noteEntity.category),
                         tags = queries.getTagsForNote(noteEntity.id).executeAsList()
                     )
                 }
@@ -141,22 +129,18 @@ class NoteRepositoryImpl(
 
     override suspend fun saveNote(note: Note) = withContext(Dispatchers.IO) {
         queries.transaction {
-            // Use insert or replace logic? SQLDelight insertNote uses INSERT. 
-            // Better to use INSERT OR REPLACE in .sq file if possible.
-            // For now I'll just delete and re-insert or assume it's an update if exists.
-            // Actually, I'll update the .sq file to use INSERT OR REPLACE.
-            
             queries.insertNote(
                 id = note.id,
                 title = note.title,
                 content_raw = note.content,
+                category = note.category.name,
                 created_at = note.createdAt,
                 updated_at = note.updatedAt,
                 view_count = note.viewCount.toLong()
             )
 
             note.embedding?.let {
-                queries.insertEmbedding(note.id, toBlob(it))
+                queries.insertEmbedding(note.id, BlobUtils.toBlob(it))
             }
             
             queries.deleteAttributesForNote(note.id)

@@ -77,14 +77,14 @@ fun CollectionList() {
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        CollectionItem("evergreen")
-        CollectionItem("raw")
-        CollectionItem("lit")
+        CollectionItem("Evergreen", dev.synapse.domain.model.NoteCategory.EVERGREEN)
+        CollectionItem("Raw", dev.synapse.domain.model.NoteCategory.RAW)
+        CollectionItem("Lit", dev.synapse.domain.model.NoteCategory.LIT)
     }
 }
 
 @Composable
-private fun CollectionItem(label: String) {
+private fun CollectionItem(label: String, category: dev.synapse.domain.model.NoteCategory) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -92,14 +92,8 @@ private fun CollectionItem(label: String) {
             .padding(vertical = 6.dp, horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "#",
-            style = TextStyle(
-                fontSize = 13.sp,
-                color = SynapseColors.OnSurfaceVariant.copy(alpha = 0.5f)
-            )
-        )
-        Spacer(modifier = Modifier.width(8.dp))
+        CategoryDot(category, size = 6.dp)
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = label,
             style = TextStyle(
