@@ -74,4 +74,5 @@ sealed interface EditorUiEvent {
     data class NoteOverflow(val blockId: String) : EditorUiEvent
     data object Resonate : EditorUiEvent
     data class LinkNotes(val sourceNoteId: String, val targetNoteId: String) : EditorUiEvent
+    data class DeleteNote(val noteId: String) : EditorUiEvent
 }

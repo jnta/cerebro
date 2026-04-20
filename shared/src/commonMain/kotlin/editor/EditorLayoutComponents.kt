@@ -20,7 +20,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.text.font.FontFamily
 import dev.synapse.domain.model.Note
 import dev.synapse.domain.model.NoteMetadata
@@ -29,7 +29,8 @@ import dev.synapse.domain.model.NoteMetadata
 fun NoteListItem(
     note: Note,
     isSelected: Boolean,
-    onSelect: (String) -> Unit
+    onSelect: (String) -> Unit,
+    onDelete: (String) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -39,7 +40,7 @@ fun NoteListItem(
             .padding(vertical = 12.dp, horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = note.title.ifEmpty { "Untitled" },
                 style = TextStyle(
@@ -62,6 +63,8 @@ fun NoteListItem(
                 )
             }
         }
+        
+        DeleteButton(onDelete = { onDelete(note.id) })
     }
 }
 
@@ -230,7 +233,10 @@ fun LeftNav(
 
 
 @Composable
-fun EditorTopBar() {
+fun EditorTopBar(
+    noteId: String,
+    onEvent: (EditorUiEvent) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -246,7 +252,14 @@ fun EditorTopBar() {
             color = SynapseColors.Primary
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (noteId.isNotEmpty()) {
+                DeleteButton(onDelete = { onEvent(EditorUiEvent.DeleteNote(noteId)) })
+            }
+            
             Icon(
                 imageVector = androidx.compose.material.icons.Icons.Default.Menu, 
                 contentDescription = "History", 
@@ -395,4 +408,45 @@ fun ResonanceFilterModal(
             }
         }
     )
+}
+@Composable
+fun DeleteButton(
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isVerifying by remember { mutableStateOf(false) }
+    
+    Button(
+        onClick = {
+            if (isVerifying) {
+                onDelete()
+                isVerifying = false
+            } else {
+                isVerifying = true
+            }
+        },
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = if (isVerifying) SynapseColors.Error else Color.Transparent,
+            contentColor = if (isVerifying) Color.White else SynapseColors.OnSurfaceVariant.copy(alpha = 0.4f)
+        ),
+        elevation = ButtonDefaults.elevation(0.dp, 0.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Delete",
+                modifier = Modifier.size(16.dp)
+            )
+            if (isVerifying) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    "CONFIRM",
+                    style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                )
+            }
+        }
+    }
 }

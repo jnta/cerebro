@@ -171,6 +171,24 @@ class EditorViewModel(
                 _state.update { it.copy(currentDestination = event.destination) }
                 true
             }
+            is EditorUiEvent.DeleteNote -> {
+                coroutineScope.launch {
+                    repository.deleteNote(event.noteId)
+                    _state.update { state ->
+                        val newNotes = state.notes.filter { it.id != event.noteId }
+                        val newStack = state.navigationStack.filter { it != event.noteId }
+                        val isCurrentNote = state.noteId == event.noteId
+                        state.copy(
+                            notes = newNotes,
+                            noteId = if (isCurrentNote) "" else state.noteId,
+                            blocks = if (isCurrentNote) emptyList() else state.blocks,
+                            navigationStack = newStack,
+                            currentDestination = if (isCurrentNote) "All Notes" else state.currentDestination
+                        )
+                    }
+                }
+                true
+            }
             else -> false
         }
     }

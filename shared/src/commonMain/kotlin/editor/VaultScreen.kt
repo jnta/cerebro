@@ -59,7 +59,11 @@ fun VaultScreen(
                 items = state.noteSummaries,
                 key = { note: NoteMetadata -> note.id }
             ) { note: NoteMetadata ->
-                NoteGridItem(note = note, onClick = { onEvent(EditorUiEvent.SelectNote(note.id)) })
+                NoteGridItem(
+                    note = note, 
+                    onClick = { onEvent(EditorUiEvent.SelectNote(note.id)) },
+                    onDelete = { onEvent(EditorUiEvent.DeleteNote(note.id)) }
+                )
             }
         }
     }
@@ -68,7 +72,8 @@ fun VaultScreen(
 @Composable
 private fun NoteGridItem(
     note: NoteMetadata,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -84,15 +89,24 @@ private fun NoteGridItem(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text(
-                    text = note.title.ifEmpty { "Untitled" },
-                    style = TextStyle(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = SynapseColors.Primary
-                    ),
-                    maxLines = 2
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = note.title.ifEmpty { "Untitled" },
+                        style = TextStyle(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SynapseColors.Primary
+                        ),
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
+                    )
+                    
+                    DeleteButton(onDelete = onDelete)
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = note.snippet,

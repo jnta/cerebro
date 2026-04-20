@@ -41,7 +41,7 @@ fun NoteEditorScreen(
             .background(SynapseColors.Surface)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            EditorTopBar()
+            EditorTopBar(noteId = state.noteId, onEvent = onEvent)
             BreadcrumbTrail(
                 navigationStack = state.navigationStack,
                 activeNoteId = state.noteId,
