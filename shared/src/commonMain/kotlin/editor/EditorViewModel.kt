@@ -15,6 +15,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlin.random.Random
 import dev.synapse.domain.repository.NoteRepository
 import dev.synapse.domain.model.Note
+import dev.synapse.domain.model.NoteMetadata
 import dev.synapse.domain.util.NoteParser
 import dev.synapse.domain.repository.ResonanceRepository
 import kotlinx.coroutines.flow.collect

@@ -30,7 +30,7 @@ class NoteRepositoryImpl(
     }
 
     override fun getNoteSummaries(): Flow<List<NoteMetadata>> {
-        return queries.getAllNotes()
+        return queries.getAllNoteMetadata()
             .asFlow()
             .mapToList(Dispatchers.IO)
             .map { notes ->
@@ -41,7 +41,8 @@ class NoteRepositoryImpl(
                         snippet = if (noteEntity.content_raw.length > 100) 
                             noteEntity.content_raw.take(100) + "..." 
                             else noteEntity.content_raw,
-                        updatedAt = noteEntity.updated_at
+                        updatedAt = noteEntity.updated_at,
+                        tags = queries.getTagsForNote(noteEntity.id).executeAsList()
                     )
                 }
             }
@@ -100,18 +101,42 @@ class NoteRepositoryImpl(
         queries.getNoteByTitle(title).executeAsOneOrNull()?.let { mapToNote(it) }
     }
 
-    override fun getForwardLinks(id: String): Flow<List<Note>> {
-        return queries.getForwardLinks(id)
+    override fun getForwardLinks(id: String): Flow<List<NoteMetadata>> {
+        return queries.getForwardLinksMetadata(id)
             .asFlow()
             .mapToList(Dispatchers.IO)
-            .map { notes -> notes.map { mapToNote(it) } }
+            .map { notes ->
+                notes.map { noteEntity ->
+                    NoteMetadata(
+                        id = noteEntity.id,
+                        title = noteEntity.title,
+                        snippet = if (noteEntity.content_raw.length > 100) 
+                            noteEntity.content_raw.take(100) + "..." 
+                            else noteEntity.content_raw,
+                        updatedAt = noteEntity.updated_at,
+                        tags = queries.getTagsForNote(noteEntity.id).executeAsList()
+                    )
+                }
+            }
     }
 
-    override fun getBackLinks(id: String): Flow<List<Note>> {
-        return queries.getBackLinks(id)
+    override fun getBackLinks(id: String): Flow<List<NoteMetadata>> {
+        return queries.getBackLinksMetadata(id)
             .asFlow()
             .mapToList(Dispatchers.IO)
-            .map { notes -> notes.map { mapToNote(it) } }
+            .map { notes ->
+                notes.map { noteEntity ->
+                    NoteMetadata(
+                        id = noteEntity.id,
+                        title = noteEntity.title,
+                        snippet = if (noteEntity.content_raw.length > 100) 
+                            noteEntity.content_raw.take(100) + "..." 
+                            else noteEntity.content_raw,
+                        updatedAt = noteEntity.updated_at,
+                        tags = queries.getTagsForNote(noteEntity.id).executeAsList()
+                    )
+                }
+            }
     }
 
     override suspend fun saveNote(note: Note) = withContext(Dispatchers.IO) {

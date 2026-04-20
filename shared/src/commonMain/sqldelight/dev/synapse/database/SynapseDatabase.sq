@@ -30,6 +30,22 @@ CREATE TABLE IF NOT EXISTS Edges (
     FOREIGN KEY (target_id) REFERENCES Notes(id) ON DELETE CASCADE
 );
 
+getNoteMetadataById:
+SELECT id, title, content_raw, updated_at FROM Notes WHERE id = ?;
+
+getAllNoteMetadata:
+SELECT id, title, content_raw, updated_at FROM Notes ORDER BY updated_at DESC;
+
+getForwardLinksMetadata:
+SELECT n.id, n.title, n.content_raw, n.updated_at FROM Notes n
+JOIN Edges e ON n.id = e.target_id
+WHERE e.source_id = ?;
+
+getBackLinksMetadata:
+SELECT n.id, n.title, n.content_raw, n.updated_at FROM Notes n
+JOIN Edges e ON n.id = e.source_id
+WHERE e.target_id = ?;
+
 insertNote:
 INSERT OR REPLACE INTO Notes(id, title, content_raw, created_at, updated_at, view_count)
 VALUES (?, ?, ?, ?, ?, ?);
@@ -58,6 +74,9 @@ SELECT embedding FROM NoteEmbeddings WHERE note_id = ?;
 
 deleteEmbedding:
 DELETE FROM NoteEmbeddings WHERE note_id = ?;
+
+getTagsForNote:
+SELECT attr_value FROM Attributes WHERE note_id = ? AND attr_key = 'tag';
 
 insertAttribute:
 INSERT OR REPLACE INTO Attributes(id, note_id, attr_key, attr_value)

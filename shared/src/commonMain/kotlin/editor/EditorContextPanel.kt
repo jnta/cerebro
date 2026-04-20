@@ -14,11 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import dev.synapse.domain.model.Note
-import editor.EditorUiState
-import editor.EditorUiEvent
-import editor.SynapseColors
-import editor.SynapseDimensions
+import dev.synapse.domain.model.NoteMetadata
 
 @Composable
 fun ContextPanel(
@@ -75,7 +71,7 @@ fun ContextPanel(
 
 
 @Composable
-fun LinkCard(note: Note, onEvent: (EditorUiEvent) -> Unit) {
+fun LinkCard(note: NoteMetadata, onEvent: (EditorUiEvent) -> Unit) {
     Card(
         backgroundColor = SynapseColors.SurfaceContainerLowest,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
@@ -90,21 +86,16 @@ fun LinkCard(note: Note, onEvent: (EditorUiEvent) -> Unit) {
             )
             
             // Meta-Pills
-            if (note.attributes.isNotEmpty()) {
+            if (note.tags.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    note.attributes.take(3).forEach { attr ->
-                        val pillText = if (attr.key == "tag") {
-                            "#${attr.value.uppercase()}"
-                        } else {
-                            "${attr.key}:${attr.value}"
-                        }
+                    note.tags.take(3).forEach { tag ->
                         Text(
-                            text = pillText,
+                            text = "#${tag.uppercase()}",
                             style = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.5.sp),
                             color = SynapseColors.OnSurfaceVariant,
                             modifier = Modifier

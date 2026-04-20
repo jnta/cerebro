@@ -4,7 +4,8 @@ data class NoteMetadata(
     val id: String,
     val title: String,
     val snippet: String,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val tags: List<String> = emptyList()
 )
 
 data class Note(
