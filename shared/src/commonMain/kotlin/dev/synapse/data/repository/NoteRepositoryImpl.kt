@@ -5,9 +5,9 @@ import app.cash.sqldelight.coroutines.mapToList
 import dev.synapse.database.SynapseDatabase
 import dev.synapse.domain.model.Note
 import dev.synapse.domain.model.NoteMetadata
+import dev.synapse.domain.model.NoteCollection
 import dev.synapse.domain.model.Attribute
 import dev.synapse.domain.model.Edge
-import dev.synapse.domain.model.NoteCategory
 import dev.synapse.domain.repository.NoteRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -45,16 +45,14 @@ class NoteRepositoryImpl(
                             noteEntity.content_raw.take(SNIPPET_LENGTH) + "..." 
                             else noteEntity.content_raw,
                         updatedAt = noteEntity.updated_at,
-                        category = parseCategory(noteEntity.category),
+                        collectionId = noteEntity.collection_id,
                         tags = queries.getTagsForNote(noteEntity.id).executeAsList()
                     )
                 }
             }
     }
 
-    private fun parseCategory(name: String): NoteCategory {
-        return NoteCategory.entries.find { it.name == name } ?: NoteCategory.RAW
-    }
+
 
     private fun mapToNote(noteEntity: dev.synapse.database.Notes): Note {
         val id = noteEntity.id
@@ -69,7 +67,7 @@ class NoteRepositoryImpl(
             id = id,
             title = noteEntity.title,
             content = noteEntity.content_raw,
-            category = parseCategory(noteEntity.category),
+            collectionId = noteEntity.collection_id,
             attributes = attributes,
             connections = edges,
             createdAt = noteEntity.created_at,
@@ -100,7 +98,7 @@ class NoteRepositoryImpl(
                             noteEntity.content_raw.take(SNIPPET_LENGTH) + "..." 
                             else noteEntity.content_raw,
                         updatedAt = noteEntity.updated_at,
-                        category = parseCategory(noteEntity.category),
+                        collectionId = noteEntity.collection_id,
                         tags = queries.getTagsForNote(noteEntity.id).executeAsList()
                     )
                 }
@@ -120,7 +118,7 @@ class NoteRepositoryImpl(
                             noteEntity.content_raw.take(SNIPPET_LENGTH) + "..." 
                             else noteEntity.content_raw,
                         updatedAt = noteEntity.updated_at,
-                        category = parseCategory(noteEntity.category),
+                        collectionId = noteEntity.collection_id,
                         tags = queries.getTagsForNote(noteEntity.id).executeAsList()
                     )
                 }
@@ -133,7 +131,7 @@ class NoteRepositoryImpl(
                 id = note.id,
                 title = note.title,
                 content_raw = note.content,
-                category = note.category.name,
+                collection_id = note.collectionId,
                 created_at = note.createdAt,
                 updated_at = note.updatedAt,
                 view_count = note.viewCount.toLong()
@@ -161,5 +159,28 @@ class NoteRepositoryImpl(
             queries.deleteEdgesForNote(id, id)
             queries.deleteNote(id)
         }
+    }
+
+    override fun getCollections(): Flow<List<NoteCollection>> {
+        return queries.getAllCollections()
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { collections ->
+                collections.map { 
+                    NoteCollection(it.id, it.name, it.color)
+                }
+            }
+    }
+
+    override suspend fun saveCollection(collection: NoteCollection) = withContext(Dispatchers.IO) {
+        queries.insertCollection(collection.id, collection.name, collection.color)
+    }
+
+    override suspend fun deleteCollection(id: String) = withContext(Dispatchers.IO) {
+        queries.deleteCollection(id)
+    }
+
+    override suspend fun isCollectionEmpty(id: String): Boolean = withContext(Dispatchers.IO) {
+        queries.countNotesInCollection(id).executeAsOne() == 0L
     }
 }

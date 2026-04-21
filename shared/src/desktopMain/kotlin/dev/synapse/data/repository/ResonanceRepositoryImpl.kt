@@ -86,6 +86,7 @@ class ResonanceRepositoryImpl(
             )
             
             val result = sess.run(inputs)
+            @Suppress("UNCHECKED_CAST")
             val output = result.get(0).value as Array<Array<FloatArray>> // Typical BERT output shape [batch, seq, dim]
             
             // Mean pooling

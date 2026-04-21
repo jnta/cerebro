@@ -61,6 +61,7 @@ class EditorOperations(
                 title = derivedTitle,
                 content = content,
                 attributes = inheritedAttributes + NoteParser.extractAttributes(content),
+                collectionId = parentNote?.collectionId ?: "raw",
                 connections = listOf(
                     Edge(
                         id = EditorLogic.generateId(),
@@ -95,7 +96,7 @@ class EditorOperations(
                 id = newId,
                 title = "Untitled",
                 content = "",
-                category = dev.synapse.domain.model.NoteCategory.RAW,
+                collectionId = "raw",
                 attributes = emptyList(),
                 connections = emptyList(),
                 createdAt = Clock.System.now().toEpochMilliseconds(),
@@ -134,10 +135,10 @@ class EditorOperations(
         }
     }
 
-    fun updateNoteCategory(category: dev.synapse.domain.model.NoteCategory, onComplete: () -> Unit) {
+    fun updateNoteCollection(collectionId: String, onComplete: () -> Unit) {
         state.update { currentState ->
             val updatedNotes = currentState.notes.map { note ->
-                if (note.id == currentState.noteId) note.copy(category = category) else note
+                if (note.id == currentState.noteId) note.copy(collectionId = collectionId) else note
             }
             currentState.copy(notes = updatedNotes)
         }

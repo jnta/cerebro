@@ -5,6 +5,7 @@ import editor.ast.NoteNode
 import editor.ast.AstParser
 import dev.synapse.domain.model.Note
 import dev.synapse.domain.model.NoteMetadata
+import dev.synapse.domain.model.NoteCollection
 
 
 
@@ -43,7 +44,11 @@ data class EditorUiState(
     val showResonanceFilter: Boolean = false,
     val originalThought: String = "",
     val currentDestination: String = "All Notes",
-    val selectedCategories: Set<dev.synapse.domain.model.NoteCategory> = emptySet(),
+    val collections: List<NoteCollection> = emptyList(),
+    val selectedCollectionIds: Set<String> = emptySet(),
+    val showCreateCollectionDialog: Boolean = false,
+    val editingCollection: NoteCollection? = null,
+    val collectionError: String? = null,
     val minThoughtLength: Int = 50
 )
 
@@ -76,6 +81,13 @@ sealed interface EditorUiEvent {
     data object Resonate : EditorUiEvent
     data class LinkNotes(val sourceNoteId: String, val targetNoteId: String) : EditorUiEvent
     data class DeleteNote(val noteId: String) : EditorUiEvent
-    data class UpdateNoteCategory(val category: dev.synapse.domain.model.NoteCategory) : EditorUiEvent
-    data class ToggleCategoryFilter(val category: dev.synapse.domain.model.NoteCategory) : EditorUiEvent
+    data class UpdateNoteCollection(val collectionId: String) : EditorUiEvent
+    data class ToggleCollectionFilter(val collectionId: String) : EditorUiEvent
+    
+    // Collection CRUD
+    data object ShowCreateCollectionDialog : EditorUiEvent
+    data object DismissCollectionDialog : EditorUiEvent
+    data class EditCollection(val collection: NoteCollection) : EditorUiEvent
+    data class SaveCollection(val id: String, val name: String, val color: String) : EditorUiEvent
+    data class DeleteCollection(val id: String) : EditorUiEvent
 }

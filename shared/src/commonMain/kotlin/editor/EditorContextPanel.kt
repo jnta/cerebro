@@ -15,7 +15,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import dev.synapse.domain.model.NoteMetadata
-import dev.synapse.domain.model.NoteCategory
+import dev.synapse.domain.model.NoteCollection
 
 @Composable
 fun ContextPanel(
@@ -43,7 +43,7 @@ fun ContextPanel(
             )
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
                 items(state.forwardLinks) { note ->
-                    LinkCard(note, onEvent)
+                    LinkCard(note, state.collections, onEvent)
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -63,7 +63,7 @@ fun ContextPanel(
             )
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
                 items(state.backLinks) { note ->
-                    LinkCard(note, onEvent)
+                    LinkCard(note, state.collections, onEvent)
                 }
             }
         }
@@ -71,7 +71,7 @@ fun ContextPanel(
 }
 
 @Composable
-fun LinkCard(note: NoteMetadata, onEvent: (EditorUiEvent) -> Unit) {
+fun LinkCard(note: NoteMetadata, collections: List<NoteCollection>, onEvent: (EditorUiEvent) -> Unit) {
     Card(
         backgroundColor = SynapseColors.SurfaceContainerLowest,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
@@ -82,7 +82,8 @@ fun LinkCard(note: NoteMetadata, onEvent: (EditorUiEvent) -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            CategoryDot(note.category, size = 6.dp, modifier = Modifier.padding(end = 12.dp))
+            val collection = collections.find { it.id == note.collectionId }
+            CollectionDot(collection, size = 6.dp, modifier = Modifier.padding(end = 12.dp))
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(

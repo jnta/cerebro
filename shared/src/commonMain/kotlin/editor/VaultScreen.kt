@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.synapse.domain.model.Note
-import dev.synapse.domain.model.NoteCategory
+import dev.synapse.domain.model.NoteCollection
 import dev.synapse.domain.model.NoteMetadata
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -62,6 +62,7 @@ fun VaultScreen(
             ) { note: NoteMetadata ->
                 NoteGridItem(
                     note = note, 
+                    collections = state.collections,
                     onClick = { onEvent(EditorUiEvent.SelectNote(note.id)) },
                     onDelete = { onEvent(EditorUiEvent.DeleteNote(note.id)) }
                 )
@@ -73,9 +74,11 @@ fun VaultScreen(
 @Composable
 private fun NoteGridItem(
     note: NoteMetadata,
+    collections: List<NoteCollection>,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val collection = collections.find { it.id == note.collectionId }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -99,7 +102,7 @@ private fun NoteGridItem(
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, 
                         modifier = Modifier.weight(1f)
                     ) {
-                        CategoryDot(note.category, modifier = Modifier.padding(end = 12.dp))
+                        CollectionDot(collection, modifier = Modifier.padding(end = 12.dp))
                         Text(
                             text = note.title.ifEmpty { "Untitled" },
                             style = TextStyle(

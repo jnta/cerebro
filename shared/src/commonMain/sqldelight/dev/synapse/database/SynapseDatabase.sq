@@ -1,11 +1,18 @@
+CREATE TABLE IF NOT EXISTS Collections (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    color TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS Notes (
     id TEXT NOT NULL PRIMARY KEY,
     title TEXT NOT NULL,
     content_raw TEXT NOT NULL,
-    category TEXT NOT NULL DEFAULT 'RAW',
+    collection_id TEXT NOT NULL DEFAULT 'raw',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
-    view_count INTEGER NOT NULL DEFAULT 0
+    view_count INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (collection_id) REFERENCES Collections(id)
 );
 
 CREATE TABLE IF NOT EXISTS NoteEmbeddings (
@@ -32,23 +39,23 @@ CREATE TABLE IF NOT EXISTS Edges (
 );
 
 getNoteMetadataById:
-SELECT id, title, content_raw, updated_at, category FROM Notes WHERE id = ?;
+SELECT id, title, content_raw, updated_at, collection_id FROM Notes WHERE id = ?;
 
 getAllNoteMetadata:
-SELECT id, title, content_raw, updated_at, category FROM Notes ORDER BY updated_at DESC;
+SELECT id, title, content_raw, updated_at, collection_id FROM Notes ORDER BY updated_at DESC;
 
 getForwardLinksMetadata:
-SELECT n.id, n.title, n.content_raw, n.updated_at, n.category FROM Notes n
+SELECT n.id, n.title, n.content_raw, n.updated_at, n.collection_id FROM Notes n
 JOIN Edges e ON n.id = e.target_id
 WHERE e.source_id = ?;
 
 getBackLinksMetadata:
-SELECT n.id, n.title, n.content_raw, n.updated_at, n.category FROM Notes n
+SELECT n.id, n.title, n.content_raw, n.updated_at, n.collection_id FROM Notes n
 JOIN Edges e ON n.id = e.source_id
 WHERE e.target_id = ?;
 
 insertNote:
-INSERT OR REPLACE INTO Notes(id, title, content_raw, category, created_at, updated_at, view_count)
+INSERT OR REPLACE INTO Notes(id, title, content_raw, collection_id, created_at, updated_at, view_count)
 VALUES (?, ?, ?, ?, ?, ?, ?);
 
 updateNoteContent:
@@ -111,4 +118,24 @@ DELETE FROM Edges WHERE source_id = ?;
 
 deleteEdgesForNote:
 DELETE FROM Edges WHERE source_id = ? OR target_id = ?;
+
+-- Collection Queries
+getAllCollections:
+SELECT * FROM Collections;
+
+insertCollection:
+INSERT OR REPLACE INTO Collections(id, name, color)
+VALUES (?, ?, ?);
+
+deleteCollection:
+DELETE FROM Collections WHERE id = ?;
+
+updateCollectionName:
+UPDATE Collections SET name = ? WHERE id = ?;
+
+updateCollectionColor:
+UPDATE Collections SET color = ? WHERE id = ?;
+
+countNotesInCollection:
+SELECT COUNT(*) FROM Notes WHERE collection_id = ?;
 

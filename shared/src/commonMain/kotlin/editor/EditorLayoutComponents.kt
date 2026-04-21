@@ -25,15 +25,17 @@ import androidx.compose.ui.text.font.FontFamily
 import dev.synapse.domain.model.Note
 import dev.synapse.domain.model.NoteMetadata
 
-import dev.synapse.domain.model.NoteCategory
+import dev.synapse.domain.model.NoteCollection
 
 @Composable
 fun NoteListItem(
     note: Note,
+    collections: List<NoteCollection>,
     isSelected: Boolean,
     onSelect: (String) -> Unit,
     onDelete: (String) -> Unit
 ) {
+    val collection = collections.find { it.id == note.collectionId }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -42,7 +44,7 @@ fun NoteListItem(
             .padding(vertical = 12.dp, horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CategoryDot(note.category, modifier = Modifier.padding(end = 12.dp))
+        CollectionDot(collection, modifier = Modifier.padding(end = 12.dp))
         
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -80,14 +82,16 @@ fun formatTimestamp(timestamp: Long): String {
 @Composable
 fun NoteHeader(
     note: Note,
+    collections: List<NoteCollection>,
     onEvent: (EditorUiEvent) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)
     ) {
-        CategoryTag(
-            category = note.category,
-            onCategorySelected = { onEvent(EditorUiEvent.UpdateNoteCategory(it)) },
+        CollectionTag(
+            currentCollectionId = note.collectionId,
+            collections = collections,
+            onCollectionSelected = { onEvent(EditorUiEvent.UpdateNoteCollection(it)) },
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
@@ -234,7 +238,8 @@ fun LeftNav(
         )
 
         CollectionList(
-            selectedCategories = state.selectedCategories,
+            collections = state.collections,
+            selectedCollectionIds = state.selectedCollectionIds,
             onEvent = onEvent
         )
 

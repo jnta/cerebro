@@ -54,4 +54,22 @@ fun MainScreen(viewModel: EditorViewModel) {
     if (state.showResonanceFilter) {
         ResonanceFilterModal(state, viewModel::onEvent)
     }
+
+    if (state.showCreateCollectionDialog || state.editingCollection != null) {
+        CollectionManagementDialog(
+            collection = state.editingCollection,
+            onDismiss = { viewModel.onEvent(EditorUiEvent.DismissCollectionDialog) },
+            onSave = { name, color ->
+                viewModel.onEvent(EditorUiEvent.SaveCollection(
+                    id = state.editingCollection?.id ?: "",
+                    name = name,
+                    color = color
+                ))
+            },
+            onDelete = if (state.editingCollection != null) {
+                { viewModel.onEvent(EditorUiEvent.DeleteCollection(state.editingCollection!!.id)) }
+            } else null,
+            error = state.collectionError
+        )
+    }
 }

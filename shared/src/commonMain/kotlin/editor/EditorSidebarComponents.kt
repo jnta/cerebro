@@ -16,6 +16,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.synapse.domain.model.NoteCollection
 
 @Composable
 fun NavigationList(activeItem: String, onEvent: (EditorUiEvent) -> Unit) {
@@ -73,40 +74,54 @@ private fun NavigationItem(
 
 @Composable
 fun CollectionList(
-    selectedCategories: Set<dev.synapse.domain.model.NoteCategory>,
+    collections: List<NoteCollection>,
+    selectedCollectionIds: Set<String>,
     onEvent: (EditorUiEvent) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        CollectionItem(
-            label = "Evergreen", 
-            category = dev.synapse.domain.model.NoteCategory.EVERGREEN,
-            isSelected = selectedCategories.contains(dev.synapse.domain.model.NoteCategory.EVERGREEN),
-            onClick = { onEvent(EditorUiEvent.ToggleCategoryFilter(dev.synapse.domain.model.NoteCategory.EVERGREEN)) }
-        )
-        CollectionItem(
-            label = "Raw", 
-            category = dev.synapse.domain.model.NoteCategory.RAW,
-            isSelected = selectedCategories.contains(dev.synapse.domain.model.NoteCategory.RAW),
-            onClick = { onEvent(EditorUiEvent.ToggleCategoryFilter(dev.synapse.domain.model.NoteCategory.RAW)) }
-        )
-        CollectionItem(
-            label = "Lit", 
-            category = dev.synapse.domain.model.NoteCategory.LIT,
-            isSelected = selectedCategories.contains(dev.synapse.domain.model.NoteCategory.LIT),
-            onClick = { onEvent(EditorUiEvent.ToggleCategoryFilter(dev.synapse.domain.model.NoteCategory.LIT)) }
-        )
+        collections.forEach { collection ->
+            CollectionItem(
+                collection = collection,
+                isSelected = selectedCollectionIds.contains(collection.id),
+                onEvent = onEvent
+            )
+        }
+        
+        // Add Collection Button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onEvent(EditorUiEvent.ShowCreateCollectionDialog) }
+                .padding(vertical = 8.dp, horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = SynapseColors.OnSurfaceVariant.copy(alpha = 0.5f)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "Add Collection",
+                style = TextStyle(
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = SynapseColors.OnSurfaceVariant.copy(alpha = 0.5f)
+                )
+            )
+        }
     }
 }
 
 @Composable
 private fun CollectionItem(
-    label: String, 
-    category: dev.synapse.domain.model.NoteCategory,
+    collection: NoteCollection,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onEvent: (EditorUiEvent) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -115,19 +130,28 @@ private fun CollectionItem(
                 if (isSelected) SynapseColors.SurfaceContainer else Color.Transparent,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
             )
-            .clickable(onClick = onClick)
+            .clickable { onEvent(EditorUiEvent.ToggleCollectionFilter(collection.id)) }
             .padding(vertical = 6.dp, horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CategoryDot(category, size = 6.dp)
+        CollectionDot(collection, size = 6.dp)
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = label,
+            text = collection.name,
+            modifier = Modifier.weight(1f),
             style = TextStyle(
                 fontSize = 13.sp,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                 color = if (isSelected) SynapseColors.Primary else SynapseColors.OnSurfaceVariant.copy(alpha = 0.7f)
             )
+        )
+        Icon(
+            imageVector = Icons.Default.Edit,
+            contentDescription = "Edit",
+            modifier = Modifier
+                .size(14.dp)
+                .clickable { onEvent(EditorUiEvent.EditCollection(collection)) },
+            tint = SynapseColors.OnSurfaceVariant.copy(alpha = 0.3f)
         )
     }
 }

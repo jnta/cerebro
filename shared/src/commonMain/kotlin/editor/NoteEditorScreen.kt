@@ -80,7 +80,7 @@ private fun EditorContentColumn(
         } else {
             val currentNote = state.notes.find { it.id == state.noteId }
             if (currentNote != null) {
-                NoteHeader(note = currentNote, onEvent = onEvent)
+                NoteHeader(note = currentNote, collections = state.collections, onEvent = onEvent)
                 Spacer(modifier = Modifier.height(24.dp))
             }
             BlockEditorArea(

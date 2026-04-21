@@ -1,21 +1,11 @@
 package dev.synapse.domain.model
 
-enum class NoteCategory {
-    RAW, LIT, EVERGREEN;
-    
-    val displayName: String get() = when(this) {
-        RAW -> "Raw"
-        LIT -> "Lit"
-        EVERGREEN -> "Evergreen"
-    }
-}
-
 data class NoteMetadata(
     val id: String,
     val title: String,
     val snippet: String,
     val updatedAt: Long,
-    val category: NoteCategory = NoteCategory.RAW,
+    val collectionId: String = "raw",
     val tags: List<String> = emptyList()
 )
 
@@ -23,7 +13,7 @@ data class Note(
     val id: String,
     val title: String,
     val content: String,
-    val category: NoteCategory = NoteCategory.RAW,
+    val collectionId: String = "raw",
     val attributes: List<Attribute> = emptyList(),
     val connections: List<Edge> = emptyList(),
     val createdAt: Long,

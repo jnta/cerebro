@@ -2,6 +2,7 @@ package dev.synapse.domain.repository
 
 import dev.synapse.domain.model.Note
 import dev.synapse.domain.model.NoteMetadata
+import dev.synapse.domain.model.NoteCollection
 import kotlinx.coroutines.flow.Flow
 
 interface NoteRepository {
@@ -13,4 +14,10 @@ interface NoteRepository {
     suspend fun deleteNote(id: String)
     fun getForwardLinks(id: String): Flow<List<NoteMetadata>>
     fun getBackLinks(id: String): Flow<List<NoteMetadata>>
+    
+    // Collection management
+    fun getCollections(): Flow<List<NoteCollection>>
+    suspend fun saveCollection(collection: NoteCollection)
+    suspend fun deleteCollection(id: String)
+    suspend fun isCollectionEmpty(id: String): Boolean
 }

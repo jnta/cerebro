@@ -45,12 +45,18 @@ class EditorViewModel(
         onEvent(EditorUiEvent.LoadNotes)
         
         coroutineScope.launch {
+            repository.getCollections().collect { collections ->
+                _state.update { it.copy(collections = collections) }
+            }
+        }
+
+        coroutineScope.launch {
             combine(
                 repository.getNoteSummaries(),
-                _state.map { it.selectedCategories }.distinctUntilChanged()
-            ) { summaries, categories ->
-                if (categories.isEmpty()) summaries
-                else summaries.filter { it.category in categories }
+                _state.map { it.selectedCollectionIds }.distinctUntilChanged()
+            ) { summaries, collections ->
+                if (collections.isEmpty()) summaries
+                else summaries.filter { it.collectionId in collections }
             }.collect { filteredSummaries ->
                 _state.update { it.copy(noteSummaries = filteredSummaries, isLoading = false) }
             }
@@ -59,10 +65,10 @@ class EditorViewModel(
         coroutineScope.launch {
             combine(
                 repository.getAllNotes(),
-                _state.map { it.selectedCategories }.distinctUntilChanged()
-            ) { notes, categories ->
-                if (categories.isEmpty()) notes
-                else notes.filter { it.category in categories }
+                _state.map { it.selectedCollectionIds }.distinctUntilChanged()
+            ) { notes, collections ->
+                if (collections.isEmpty()) notes
+                else notes.filter { it.collectionId in collections }
             }.collect { filteredNotes ->
                 _state.update { it.copy(notes = filteredNotes) }
             }
@@ -140,13 +146,27 @@ class EditorViewModel(
             is EditorUiEvent.CreateNewNote -> { operations.createNewNote(); true }
             is EditorUiEvent.SaveCurrentNote,
             is EditorUiEvent.CommitNote,
-            is EditorUiEvent.UpdateNoteCategory -> handlePersistenceEvents(event)
+            is EditorUiEvent.UpdateNoteCollection -> handlePersistenceEvents(event)
             is EditorUiEvent.UpdateOriginalThought -> { 
                 _state.update { it.copy(originalThought = event.text) }; true 
             }
             is EditorUiEvent.ToggleSidebar,
             is EditorUiEvent.ToggleContextPanel,
-            is EditorUiEvent.ToggleCategoryFilter -> handleToggleEvents(event)
+            is EditorUiEvent.ToggleCollectionFilter -> handleToggleEvents(event)
+            is EditorUiEvent.ShowCreateCollectionDialog -> {
+                _state.update { it.copy(showCreateCollectionDialog = true, editingCollection = null) }
+                true
+            }
+            is EditorUiEvent.DismissCollectionDialog -> {
+                _state.update { it.copy(showCreateCollectionDialog = false, editingCollection = null, collectionError = null) }
+                true
+            }
+            is EditorUiEvent.EditCollection -> {
+                _state.update { it.copy(showCreateCollectionDialog = true, editingCollection = event.collection) }
+                true
+            }
+            is EditorUiEvent.SaveCollection,
+            is EditorUiEvent.DeleteCollection -> handleCollectionCRUD(event)
             is EditorUiEvent.LinkNotes -> { operations.linkNotes(event); true }
             is EditorUiEvent.NavigateTo -> {
                 _state.update { it.copy(currentDestination = event.destination) }
@@ -161,8 +181,8 @@ class EditorViewModel(
         when (event) {
             is EditorUiEvent.SaveCurrentNote -> handleSave(isCommit = false)
             is EditorUiEvent.CommitNote -> handleSave(isCommit = true)
-            is EditorUiEvent.UpdateNoteCategory -> 
-                operations.updateNoteCategory(event.category) { handleSave(isCommit = false) }
+            is EditorUiEvent.UpdateNoteCollection -> 
+                operations.updateNoteCollection(event.collectionId) { handleSave(isCommit = false) }
             else -> return false
         }
         return true
@@ -184,17 +204,43 @@ class EditorViewModel(
                 _state.update { it.copy(isSidebarVisible = !it.isSidebarVisible) }
             is EditorUiEvent.ToggleContextPanel -> 
                 _state.update { it.copy(isContextPanelVisible = !it.isContextPanelVisible) }
-            is EditorUiEvent.ToggleCategoryFilter -> {
+            is EditorUiEvent.ToggleCollectionFilter -> {
                 _state.update { state ->
-                    val newSelected = if (state.selectedCategories.contains(event.category)) {
-                        state.selectedCategories - event.category
+                    val newSelected = if (state.selectedCollectionIds.contains(event.collectionId)) {
+                        state.selectedCollectionIds - event.collectionId
                     } else {
-                        state.selectedCategories + event.category
+                        state.selectedCollectionIds + event.collectionId
                     }
-                    state.copy(selectedCategories = newSelected)
+                    state.copy(selectedCollectionIds = newSelected)
                 }
             }
             else -> return false
+        }
+        return true
+    }
+
+    private fun handleCollectionCRUD(event: EditorUiEvent): Boolean {
+        coroutineScope.launch {
+            when (event) {
+                is EditorUiEvent.SaveCollection -> {
+                    val id = if (event.id.isEmpty()) {
+                        event.name.lowercase().replace(" ", "-") + "-" + Random.nextInt(1000)
+                    } else {
+                        event.id
+                    }
+                    repository.saveCollection(dev.synapse.domain.model.NoteCollection(id, event.name, event.color))
+                    _state.update { it.copy(showCreateCollectionDialog = false, editingCollection = null) }
+                }
+                is EditorUiEvent.DeleteCollection -> {
+                    if (repository.isCollectionEmpty(event.id)) {
+                        repository.deleteCollection(event.id)
+                        _state.update { it.copy(showCreateCollectionDialog = false, editingCollection = null, collectionError = null) }
+                    } else {
+                        _state.update { it.copy(collectionError = "Cannot delete collection that has notes associated to it.") }
+                    }
+                }
+                else -> {}
+            }
         }
         return true
     }
@@ -242,14 +288,14 @@ class EditorViewModel(
                 }
             }
 
-            val currentCategory = _state.value.notes.find { it.id == selectedId }?.category 
-                ?: dev.synapse.domain.model.NoteCategory.RAW
+            val currentCollectionId = _state.value.notes.find { it.id == selectedId }?.collectionId 
+                ?: "raw"
 
             val updatedNote = Note(
                 id = selectedId,
                 title = derivedTitle,
                 content = fullContent,
-                category = currentCategory,
+                collectionId = currentCollectionId,
                 attributes = NoteParser.extractAttributes(fullContent),
                 connections = resolvedEdges,
                 createdAt = existingNote?.createdAt ?: Clock.System.now().toEpochMilliseconds(),

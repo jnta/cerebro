@@ -6,6 +6,12 @@ plugins {
 }
 
 kotlin {
+    targets.all {
+        compilations.all {
+            kotlinOptions.freeCompilerArgs += "-Xexpect-actual-classes"
+        }
+    }
+    
     jvm("desktop")
 
     sourceSets {
