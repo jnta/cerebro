@@ -1,22 +1,18 @@
-# Issue tracker: GitHub
+# Issue tracker: Local Markdown
 
-Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
+Issues and PRDs for this repo live as markdown files under `.scratch/`.
 
 ## Conventions
 
-- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
-- **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
-- **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
-- **Comment on an issue**: `gh issue comment <number> --body "..."`
-- **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
-- **Close**: `gh issue close <number> --comment "..."`
-
-Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
+- **Create a new feature/task**: Create a directory `.scratch/<feature-name>/`.
+- **Create an issue**: Create a file `.scratch/<feature-name>/issue.md` (or `PRD.md`).
+- **Structure**: Use standard markdown. Include a `Status:` line at the top to track triage roles (e.g., `Status: ready-for-agent`).
+- **Comments**: Append to the bottom of the file with a `## Comments` section.
 
 ## When a skill says "publish to the issue tracker"
 
-Create a GitHub issue.
+Create or update a markdown file in the appropriate subfolder of `.scratch/`.
 
 ## When a skill says "fetch the relevant ticket"
 
-Run `gh issue view <number> --comments`.
+Read the markdown file associated with the feature you are working on.
