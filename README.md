@@ -1,7 +1,7 @@
 # Synapse 🧠
-> The AI-Native Cognitive Gym (Active Learning & Desirable Difficulty).
+> Intelligent Note-Taking & Knowledge Graphing.
 
-Synapse is a local-first, high-friction knowledge management system designed to transform passive consumption into active mastery. Built on the principle of **"Friction as a Feature"**, it forces synthesis and reflection rather than simple storage.
+Synapse is a local-first, AI-native knowledge management system focused on interconnected thoughts. It leverages semantic search and graph visualization to help you discover hidden connections in your local note vault.
 
 ## 🚀 Getting Started
 
@@ -32,13 +32,13 @@ Or using Gradle directly:
 - **UI:** Compose Multiplatform (Kotlin)
 - **Backend:** Kotlin Multiplatform / JVM
 - **Database:** Local Markdown + `sqlite-vec` (Semantic Search)
-- **AI:** Local LLM via Ollama / llama.cpp
+- **AI:** RAG capabilities with support for local (Ollama / llama.cpp) and cloud AI providers.
 
-## ⚖️ Friction Logic
-- **Resonance Filter:** No "silent saves." Every note requires original thought.
-- **Fog of War:** Progressive text masking to force active recall.
-- **Semantic Decay:** Resources are pruned if not actively linked or accessed.
-- **No Passive Summaries:** AI generates quizzes to unlock synthesis.
+## ✨ Key Features
+- **Bidirectional Linking:** Connect notes and navigate your knowledge web.
+- **Graph Visualization:** See your notes as a living, breathing network.
+- **Semantic Search:** Find notes based on meaning, not just keywords.
+- **AI-Powered RAG:** Use your local notes as a private brain for AI interactions.
 
 ---
-*Built for deep work and cognitive endurance.*
+*Built for knowledge synthesis and discovery.*
