@@ -95,19 +95,24 @@ class NoteRepositoryImpl(
 
         val results = when (mode) {
             SearchMode.EXACT -> {
-                queries.searchNotesKeyword(query).executeAsList().map { mapToMetadata(it) }
+                queries.searchNotesKeyword(toFtsPrefixQuery(query)).executeAsList().map { mapToMetadata(it) }
             }
             SearchMode.SEMANTIC -> {
                 resonanceRepository.getResonance(query).map { mapResonanceToMetadata(it) }
             }
             SearchMode.HYBRID -> {
-                val keyword = queries.searchNotesKeyword(query).executeAsList().map { mapToMetadata(it) }
+                val keyword = queries.searchNotesKeyword(toFtsPrefixQuery(query)).executeAsList().map { mapToMetadata(it) }
                 val semantic = resonanceRepository.getResonance(query).map { mapResonanceToMetadata(it) }
                 reciprocalRankFusion(keyword, semantic)
             }
         }
         emit(results)
     }
+
+    private fun toFtsPrefixQuery(query: String): String =
+        query.trim().split(Regex("\\s+"))
+            .filter { it.isNotEmpty() }
+            .joinToString(" ") { "$it*" }
 
     private fun reciprocalRankFusion(
         keywordResults: List<NoteMetadata>,
