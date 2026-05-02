@@ -27,9 +27,6 @@ fun NavigationList(activeItem: String, onEvent: (EditorUiEvent) -> Unit) {
         NavigationItem("All Notes", Icons.AutoMirrored.Filled.List, activeItem == "All Notes") {
             onEvent(EditorUiEvent.NavigateTo("All Notes"))
         }
-        NavigationItem("Search", Icons.Default.Search, activeItem == "Search") {
-            onEvent(EditorUiEvent.NavigateTo("Search"))
-        }
         NavigationItem("Graph", Icons.Default.Hub, activeItem == "Graph") {
             onEvent(EditorUiEvent.NavigateTo("Graph"))
         }

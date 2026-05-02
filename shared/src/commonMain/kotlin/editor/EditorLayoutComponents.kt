@@ -22,6 +22,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.runtime.*
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.TextFieldValue
 import dev.synapse.domain.model.Note
 import dev.synapse.domain.model.NoteMetadata
 
@@ -251,52 +254,133 @@ fun LeftNav(
 
 
 @Composable
-fun EditorTopBar(
-    noteId: String,
+fun SynapseHeader(
+    state: EditorUiState,
     onEvent: (EditorUiEvent) -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(72.dp)
             .background(SynapseColors.Panel)
             .padding(horizontal = 48.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "Note Editor",
-            style = MaterialTheme.typography.subtitle1.copy(fontWeight = FontWeight.Medium),
-            color = SynapseColors.Primary
-        )
+        // Left side: Page Title or Breadcrumb
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = if (state.currentDestination == "Editor") "EDITOR" else "VAULT",
+                style = TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp,
+                    color = SynapseColors.OnSurfaceVariant.copy(alpha = 0.4f)
+                )
+            )
+        }
 
+        // Center: Search Bar
         Row(
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            modifier = Modifier
+                .width(480.dp)
+                .height(40.dp)
+                .background(SynapseColors.SurfaceContainerLowest, shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (noteId.isNotEmpty()) {
-                DeleteButton(onDelete = { onEvent(EditorUiEvent.DeleteNote(noteId)) })
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = SynapseColors.OnSurfaceVariant.copy(alpha = 0.5f)
+            )
+            
+            Box(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                if (state.searchQuery.isEmpty()) {
+                    Text(
+                        text = "Search knowledge...",
+                        style = TextStyle(fontSize = 13.sp, color = SynapseColors.OnSurfaceVariant.copy(alpha = 0.3f))
+                    )
+                }
+                BasicTextField(
+                    value = state.searchQuery,
+                    onValueChange = { onEvent(EditorUiEvent.UpdateSearchQuery(it)) },
+                    textStyle = TextStyle(fontSize = 13.sp, color = SynapseColors.Primary),
+                    modifier = Modifier.fillMaxWidth(),
+                    cursorBrush = SolidColor(SynapseColors.Primary),
+                    singleLine = true
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .background(SynapseColors.SurfaceContainer, shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
+                    .padding(2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SearchModeButton(
+                    label = "HYBRID",
+                    active = state.searchMode == SearchMode.HYBRID,
+                    onClick = { onEvent(EditorUiEvent.UpdateSearchMode(SearchMode.HYBRID)) }
+                )
+                SearchModeButton(
+                    label = "SEMANTIC",
+                    active = state.searchMode == SearchMode.SEMANTIC,
+                    onClick = { onEvent(EditorUiEvent.UpdateSearchMode(SearchMode.SEMANTIC)) }
+                )
+                SearchModeButton(
+                    label = "EXACT",
+                    active = state.searchMode == SearchMode.EXACT,
+                    onClick = { onEvent(EditorUiEvent.UpdateSearchMode(SearchMode.EXACT)) }
+                )
+            }
+        }
+
+        // Right side: Actions
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (state.currentDestination == "Editor" && state.noteId.isNotEmpty()) {
+                DeleteButton(onDelete = { onEvent(EditorUiEvent.DeleteNote(state.noteId)) })
             }
             
             Icon(
-                imageVector = androidx.compose.material.icons.Icons.Default.Menu, 
-                contentDescription = "History", 
-                tint = Color.Gray, 
-                modifier = Modifier.size(20.dp)
-            )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "Share",
-                tint = Color.Gray,
-                modifier = Modifier.size(20.dp)
-            )
-            Icon(
-                imageVector = androidx.compose.material.icons.Icons.Default.Add, 
-                contentDescription = "More", 
-                tint = Color.Gray, 
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = null,
+                tint = SynapseColors.OnSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(20.dp)
             )
         }
+    }
+}
+
+@Composable
+private fun SearchModeButton(
+    label: String,
+    active: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .background(
+                if (active) SynapseColors.SurfaceContainerLowest else Color.Transparent,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = label,
+            style = TextStyle(
+                fontFamily = FontFamily.Monospace,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (active) SynapseColors.Primary else SynapseColors.OnSurfaceVariant.copy(alpha = 0.4f)
+            )
+        )
     }
 }
 

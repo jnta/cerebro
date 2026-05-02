@@ -38,11 +38,15 @@ fun MainScreen(viewModel: EditorViewModel) {
             LeftNav(state = state, onEvent = viewModel::onEvent)
         }
 
-        Box(modifier = Modifier.weight(1f)) {
-            when (state.currentDestination) {
-                "All Notes" -> VaultScreen(state = state, onEvent = viewModel::onEvent)
-                "Editor" -> NoteEditorScreen(state = state, onEvent = viewModel::onEvent)
-                else -> VaultScreen(state = state, onEvent = viewModel::onEvent)
+        Column(modifier = Modifier.weight(1f)) {
+            SynapseHeader(state = state, onEvent = viewModel::onEvent)
+            
+            Box(modifier = Modifier.fillMaxSize()) {
+                when (state.currentDestination) {
+                    "All Notes" -> VaultScreen(state = state, onEvent = viewModel::onEvent)
+                    "Editor" -> NoteEditorScreen(state = state, onEvent = viewModel::onEvent)
+                    else -> VaultScreen(state = state, onEvent = viewModel::onEvent)
+                }
             }
         }
 

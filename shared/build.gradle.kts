@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.compose")
     kotlin("plugin.compose")
     id("app.cash.sqldelight")
+    id("com.android.library")
 }
 
 kotlin {
@@ -13,6 +14,7 @@ kotlin {
     }
     
     jvm("desktop")
+    androidTarget()
 
     sourceSets {
         val commonMain by getting {
@@ -39,12 +41,20 @@ kotlin {
                 implementation("app.cash.turbine:turbine:1.0.0")
             }
         }
+        val androidMain by getting {
+            dependencies {
+                implementation("tech.turso.libsql:libsql:0.1.2")
+                implementation("app.cash.sqldelight:android-driver:2.0.2")
+            }
+        }
         val desktopMain by getting {
             dependencies {
                 implementation(compose.desktop.common)
                 implementation("app.cash.sqldelight:sqlite-driver:2.0.2")
+                implementation("org.xerial:sqlite-jdbc:3.45.2.0")
                 implementation("com.microsoft.onnxruntime:onnxruntime:1.17.1")
                 implementation("ai.djl.huggingface:tokenizers:0.28.0")
+                implementation("org.slf4j:slf4j-simple:2.0.9")
             }
         }
         val desktopTest by getting {
@@ -60,6 +70,14 @@ sqldelight {
         create("SynapseDatabase") {
             packageName.set("dev.synapse.database")
         }
+    }
+}
+
+android {
+    namespace = "dev.synapse"
+    compileSdk = 34
+    defaultConfig {
+        minSdk = 24
     }
 }
 

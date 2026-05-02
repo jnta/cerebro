@@ -8,16 +8,21 @@ import dev.synapse.domain.model.NoteMetadata
 import dev.synapse.domain.model.NoteCollection
 import dev.synapse.domain.model.Attribute
 import dev.synapse.domain.model.Edge
+import dev.synapse.domain.repository.ResonanceRepository
 import dev.synapse.domain.repository.NoteRepository
+import editor.SearchMode
+import editor.ResonanceItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 private const val SNIPPET_LENGTH = 100
 
 class NoteRepositoryImpl(
-    private val database: SynapseDatabase
+    private val database: SynapseDatabase,
+    private val resonanceRepository: ResonanceRepository
 ) : NoteRepository {
     private val queries = database.synapseDatabaseQueries
 
@@ -38,18 +43,92 @@ class NoteRepositoryImpl(
             .mapToList(Dispatchers.IO)
             .map { notes ->
                 notes.map { noteEntity ->
-                    NoteMetadata(
-                        id = noteEntity.id,
-                        title = noteEntity.title,
-                        snippet = if (noteEntity.content_raw.length > SNIPPET_LENGTH) 
-                            noteEntity.content_raw.take(SNIPPET_LENGTH) + "..." 
-                            else noteEntity.content_raw,
-                        updatedAt = noteEntity.updated_at,
-                        collectionId = noteEntity.collection_id,
-                        tags = queries.getTagsForNote(noteEntity.id).executeAsList()
-                    )
+                    mapToMetadata(noteEntity)
                 }
             }
+    }
+
+    private fun mapResonanceToMetadata(resonance: ResonanceItem): NoteMetadata {
+        return queries.getNoteById(resonance.id).executeAsOneOrNull()?.let { 
+            mapToMetadata(it) 
+        } ?: NoteMetadata(
+            id = resonance.id,
+            title = resonance.title,
+            snippet = resonance.snippet,
+            updatedAt = 0,
+            collectionId = "raw",
+            tags = resonance.tags
+        )
+    }
+
+    private fun mapToMetadata(noteEntity: dev.synapse.database.Notes): NoteMetadata {
+        return NoteMetadata(
+            id = noteEntity.id,
+            title = noteEntity.title,
+            snippet = if (noteEntity.content_raw.length > SNIPPET_LENGTH) 
+                noteEntity.content_raw.take(SNIPPET_LENGTH) + "..." 
+                else noteEntity.content_raw,
+            updatedAt = noteEntity.updated_at,
+            collectionId = noteEntity.collection_id,
+            tags = queries.getTagsForNote(noteEntity.id).executeAsList()
+        )
+    }
+
+    private fun mapToMetadata(noteEntity: dev.synapse.database.GetAllNoteMetadata): NoteMetadata {
+        return NoteMetadata(
+            id = noteEntity.id,
+            title = noteEntity.title,
+            snippet = if (noteEntity.content_raw.length > SNIPPET_LENGTH) 
+                noteEntity.content_raw.take(SNIPPET_LENGTH) + "..." 
+                else noteEntity.content_raw,
+            updatedAt = noteEntity.updated_at,
+            collectionId = noteEntity.collection_id,
+            tags = queries.getTagsForNote(noteEntity.id).executeAsList()
+        )
+    }
+
+    override fun searchNotes(query: String, mode: SearchMode): Flow<List<NoteMetadata>> = flow {
+        if (query.isEmpty()) {
+            emit(emptyList())
+            return@flow
+        }
+
+        val results = when (mode) {
+            SearchMode.EXACT -> {
+                queries.searchNotesKeyword(query).executeAsList().map { mapToMetadata(it) }
+            }
+            SearchMode.SEMANTIC -> {
+                resonanceRepository.getResonance(query).map { mapResonanceToMetadata(it) }
+            }
+            SearchMode.HYBRID -> {
+                val keyword = queries.searchNotesKeyword(query).executeAsList().map { mapToMetadata(it) }
+                val semantic = resonanceRepository.getResonance(query).map { mapResonanceToMetadata(it) }
+                reciprocalRankFusion(keyword, semantic)
+            }
+        }
+        emit(results)
+    }
+
+    private fun reciprocalRankFusion(
+        keywordResults: List<NoteMetadata>,
+        semanticResults: List<NoteMetadata>,
+        k: Int = 60
+    ): List<NoteMetadata> {
+        val scores = mutableMapOf<String, Double>()
+        
+        keywordResults.forEachIndexed { index, note ->
+            scores[note.id] = scores.getOrDefault(note.id, 0.0) + 1.0 / (k + index + 1)
+        }
+        
+        semanticResults.forEachIndexed { index, note ->
+            scores[note.id] = scores.getOrDefault(note.id, 0.0) + 1.0 / (k + index + 1)
+        }
+        
+        val allNotes = (keywordResults + semanticResults).associateBy { it.id }
+        
+        return scores.entries
+            .sortedByDescending { it.value }
+            .mapNotNull { allNotes[it.key] }
     }
 
 
@@ -151,6 +230,7 @@ class NoteRepositoryImpl(
                 queries.insertEdge(it.id, it.sourceId, it.targetId, it.label)
             }
         }
+        resonanceRepository.updateEmbedding(note.id, note.content)
     }
 
     override suspend fun deleteNote(id: String) = withContext(Dispatchers.IO) {

@@ -14,16 +14,24 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
+import dev.synapse.domain.repository.ResonanceRepository
+import editor.ResonanceItem
+
 class NoteRepositoryImplTest {
     private lateinit var database: SynapseDatabase
     private lateinit var repository: NoteRepositoryImpl
+    private val resonanceRepository = object : ResonanceRepository {
+        override suspend fun getResonance(text: String): List<ResonanceItem> = emptyList()
+        override suspend fun updateEmbedding(noteId: String, content: String) {}
+        override suspend fun searchSemanticIds(query: String, limit: Int): List<Long> = emptyList()
+    }
 
     @BeforeTest
     fun setup() {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         SynapseDatabase.Schema.create(driver)
         database = SynapseDatabase(driver)
-        repository = NoteRepositoryImpl(database)
+        repository = NoteRepositoryImpl(database, resonanceRepository)
     }
 
     @Test

@@ -108,6 +108,19 @@ class EditorViewModel(
                 }
             }
         }
+
+        coroutineScope.launch {
+            _state.map { it.searchQuery to it.searchMode }
+                .distinctUntilChanged()
+                .debounce(DEBOUNCE_MS)
+                .collect { (query, _) ->
+                    if (query.isNotEmpty()) {
+                        executeSearch()
+                    } else {
+                        _state.update { it.copy(searchResults = emptyList()) }
+                    }
+                }
+        }
     }
 
     private val operations = EditorOperations(coroutineScope, repository, resonanceRepository, _state)
@@ -173,6 +186,19 @@ class EditorViewModel(
                 true
             }
             is EditorUiEvent.DeleteNote -> { operations.deleteNote(event.noteId); true }
+            is EditorUiEvent.UpdateSearchQuery -> {
+                _state.update { it.copy(searchQuery = event.query) }
+                true
+            }
+            is EditorUiEvent.UpdateSearchMode -> {
+                _state.update { it.copy(searchMode = event.mode) }
+                true
+            }
+            is EditorUiEvent.ExecuteSearch -> { executeSearch(); true }
+            is EditorUiEvent.ClearSearch -> {
+                _state.update { it.copy(searchQuery = "", searchResults = emptyList()) }
+                true
+            }
             else -> false
         }
     }
@@ -384,5 +410,14 @@ class EditorViewModel(
         }
     }
 
+    private fun executeSearch() {
+        val query = _state.value.searchQuery
+        val mode = _state.value.searchMode
 
+        coroutineScope.launch {
+            repository.searchNotes(query, mode).collect { results ->
+                _state.update { it.copy(searchResults = results) }
+            }
+        }
+    }
 }

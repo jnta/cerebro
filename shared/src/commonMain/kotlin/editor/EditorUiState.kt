@@ -7,6 +7,13 @@ import dev.synapse.domain.model.Note
 import dev.synapse.domain.model.NoteMetadata
 import dev.synapse.domain.model.NoteCollection
 
+@Immutable
+enum class SearchMode {
+    HYBRID,   // Semantic + Sparse (RRF)
+    SEMANTIC, // Semantic only
+    EXACT     // Specific Terms (Keyword)
+}
+
 
 
 
@@ -49,7 +56,10 @@ data class EditorUiState(
     val showCreateCollectionDialog: Boolean = false,
     val editingCollection: NoteCollection? = null,
     val collectionError: String? = null,
-    val minThoughtLength: Int = 50
+    val minThoughtLength: Int = 50,
+    val searchQuery: String = "",
+    val searchMode: SearchMode = SearchMode.HYBRID,
+    val searchResults: List<NoteMetadata> = emptyList()
 )
 
 sealed interface EditorUiEvent {
@@ -90,4 +100,10 @@ sealed interface EditorUiEvent {
     data class EditCollection(val collection: NoteCollection) : EditorUiEvent
     data class SaveCollection(val id: String, val name: String, val color: String) : EditorUiEvent
     data class DeleteCollection(val id: String) : EditorUiEvent
+    
+    // Search
+    data class UpdateSearchQuery(val query: String) : EditorUiEvent
+    data class UpdateSearchMode(val mode: SearchMode) : EditorUiEvent
+    data object ExecuteSearch : EditorUiEvent
+    data object ClearSearch : EditorUiEvent
 }

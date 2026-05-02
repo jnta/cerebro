@@ -67,6 +67,9 @@ DELETE FROM Notes WHERE id = ?;
 getNoteById:
 SELECT * FROM Notes WHERE id = ?;
 
+getNoteByRowId:
+SELECT * FROM Notes WHERE rowid = ?;
+
 getAllNotes:
 SELECT * FROM Notes ORDER BY updated_at DESC;
 
@@ -79,6 +82,11 @@ VALUES (?, ?);
 
 getEmbedding:
 SELECT embedding FROM NoteEmbeddings WHERE note_id = ?;
+
+getAllNoteEmbeddings:
+SELECT ne.note_id, ne.embedding, n.rowid AS note_rowid
+FROM NoteEmbeddings ne
+JOIN Notes n ON ne.note_id = n.id;
 
 deleteEmbedding:
 DELETE FROM NoteEmbeddings WHERE note_id = ?;
@@ -138,4 +146,44 @@ UPDATE Collections SET color = ? WHERE id = ?;
 
 countNotesInCollection:
 SELECT COUNT(*) FROM Notes WHERE collection_id = ?;
+
+seedInitialCollections:
+INSERT OR IGNORE INTO Collections (id, name, color) VALUES 
+('raw', 'Raw', '#BDBDBD'),
+('lit', 'Lit', '#64B5F6'),
+('evergreen', 'Evergreen', '#4CAF50');
+
+-- FTS5 Search
+CREATE VIRTUAL TABLE IF NOT EXISTS NotesFTS USING fts5(
+    id UNINDEXED,
+    title,
+    content_raw,
+    content='Notes',
+    content_rowid='rowid'
+);
+
+-- Triggers to keep FTS in sync using rowid for external content
+CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON Notes BEGIN
+  INSERT INTO NotesFTS(rowid, id, title, content_raw) VALUES (new.rowid, new.id, new.title, new.content_raw);
+END;
+
+CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON Notes BEGIN
+  INSERT INTO NotesFTS(NotesFTS, rowid, id, title, content_raw) VALUES('delete', old.rowid, old.id, old.title, old.content_raw);
+END;
+
+CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON Notes BEGIN
+  INSERT INTO NotesFTS(NotesFTS, rowid, id, title, content_raw) VALUES('delete', old.rowid, old.id, old.title, old.content_raw);
+  INSERT INTO NotesFTS(rowid, id, title, content_raw) VALUES (new.rowid, new.id, new.title, new.content_raw);
+END;
+
+searchNotesKeyword:
+SELECT n.*
+FROM Notes n
+JOIN NotesFTS ON n.rowid = NotesFTS.rowid
+WHERE NotesFTS MATCH :query
+ORDER BY bm25(NotesFTS);
+
+
+-- Note: NotesVec table and index are created manually in DatabaseDriverFactory
+-- to avoid SQLDelight parser issues with libSQL-specific syntax.
 

@@ -3,6 +3,7 @@ package dev.synapse.domain.repository
 import dev.synapse.domain.model.Note
 import dev.synapse.domain.model.NoteMetadata
 import dev.synapse.domain.model.NoteCollection
+import editor.SearchMode
 import kotlinx.coroutines.flow.Flow
 
 interface NoteRepository {
@@ -20,4 +21,6 @@ interface NoteRepository {
     suspend fun saveCollection(collection: NoteCollection)
     suspend fun deleteCollection(id: String)
     suspend fun isCollectionEmpty(id: String): Boolean
+    
+    fun searchNotes(query: String, mode: SearchMode): Flow<List<NoteMetadata>>
 }

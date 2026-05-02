@@ -41,7 +41,7 @@ fun NoteEditorScreen(
             .background(SynapseColors.Surface)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            EditorTopBar(noteId = state.noteId, onEvent = onEvent)
+            // Header is now handled by SynapseHeader in MainScreen.kt
             BreadcrumbTrail(
                 navigationStack = state.navigationStack,
                 activeNoteId = state.noteId,

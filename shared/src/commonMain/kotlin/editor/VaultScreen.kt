@@ -29,8 +29,12 @@ fun VaultScreen(
             .fillMaxSize()
             .padding(horizontal = 48.dp, vertical = 32.dp)
     ) {
+        val displayNotes = if (state.searchQuery.isNotEmpty()) state.searchResults else state.noteSummaries
+        val displayTitle = if (state.searchQuery.isNotEmpty()) "Search Results" else "Vault"
+        val displayCount = if (state.searchQuery.isNotEmpty()) "${displayNotes.size} MATCHES FOUND" else "${displayNotes.size} NOTES IN REPOSITORY"
+
         Text(
-            text = "Vault",
+            text = displayTitle,
             style = TextStyle(
                 fontSize = 32.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -39,7 +43,7 @@ fun VaultScreen(
             )
         )
         Text(
-            text = "${state.noteSummaries.size} NOTES IN REPOSITORY",
+            text = displayCount,
             style = TextStyle(
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
@@ -57,7 +61,7 @@ fun VaultScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             items(
-                items = state.noteSummaries,
+                items = displayNotes,
                 key = { note: NoteMetadata -> note.id }
             ) { note: NoteMetadata ->
                 NoteGridItem(
